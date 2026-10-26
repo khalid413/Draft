@@ -158,6 +158,62 @@ class OnlineRoomTest extends TestCase
         }
     }
 
+    private function playToEnd(array $room): array
+    {
+        for ($i = 0; $i < $room['game']['roundLimit']; $i++) {
+            $active = $room['game']['activePlayer'];
+            $view = $this->seat($active)->getJson('/rooms/'.$room['id'])->assertOk()->json();
+            $room = $this->seat($active)->postJson('/rooms/'.$room['id'].'/pick', ['version' => $view['version'], 'cardId' => $view['game']['cards'][0]['selectionId']])->assertOk()->json();
+            $last = $i + 1 === $room['game']['roundLimit'];
+            $room = $this->seat(1)->postJson('/rooms/'.$room['id'].'/'.($last ? 'finish' : 'next'), ['version' => $room['version']])->assertOk()->json();
+        }
+
+        return $room;
+    }
+
+    public function test_rematch_returns_everyone_to_the_lobby_with_the_same_settings(): void
+    {
+        $room = $this->begin($this->lobby());
+        $this->seat(1)->postJson('/rooms/'.$room['id'].'/rematch', ['version' => $room['version']])->assertUnprocessable();
+        $room = $this->playToEnd($room);
+        $this->assertSame('finished', $room['status']);
+        $settings = $room['settings'];
+        $firstGame = Room::first()->game_uuid;
+        $room = $this->seat(1)->postJson('/rooms/'.$room['id'].'/rematch', ['version' => $room['version']])->assertOk()
+            ->assertJsonPath('status', 'lobby')->assertJsonPath('game', null)->assertJsonPath('viewerIndex', 1)
+            ->assertJsonPath('members.0.ready', false)->assertJsonPath('members.1.ready', false)->json();
+        $this->assertSame($settings, $room['settings']);
+        $this->seat(0)->getJson('/rooms/'.$room['id'])->assertJsonPath('status', 'lobby')->assertJsonPath('isHost', true);
+        $room = $this->begin($room);
+        $this->assertSame('playing', $room['status']);
+        $this->assertNotSame($firstGame, Room::first()->game_uuid);
+    }
+
+    public function test_leaving_after_the_game_frees_the_seat_for_the_rematch(): void
+    {
+        $room = $this->playToEnd($this->begin($this->lobby()));
+        $this->seat(1)->postJson('/rooms/'.$room['id'].'/leave', ['version' => $room['version']])->assertOk()->assertContent('null');
+        $room = $this->seat(0)->getJson('/rooms/'.$room['id'])->assertOk()->assertJsonPath('members.1.left', true)->json();
+        $room = $this->seat(0)->postJson('/rooms/'.$room['id'].'/rematch', ['version' => $room['version']])->assertOk()
+            ->assertJsonPath('status', 'lobby')->assertJsonCount(1, 'members')->assertJsonPath('isHost', true)->json();
+        $this->seat(5)->postJson('/rooms/join', ['name' => 'Newcomer', 'code' => $room['code']])->assertOk()->assertJsonPath('viewerIndex', 1);
+    }
+
+    public function test_host_editing_settings_notifies_the_lobby_without_removing_anyone(): void
+    {
+        $room = $this->lobby();
+        $this->seat(1)->postJson('/rooms/'.$room['id'].'/editing', ['version' => $room['version'], 'editing' => true])->assertForbidden();
+        $room = $this->seat(0)->postJson('/rooms/'.$room['id'].'/editing', ['version' => $room['version'], 'editing' => true])->assertOk()->json();
+        $this->seat(1)->getJson('/rooms/'.$room['id'])->assertOk()->assertJsonPath('hostEditing', true)
+            ->assertJsonPath('viewerIndex', 1)->assertJsonCount(2, 'members');
+        $settings = ['version' => $room['version'], 'name' => 'Host', 'capacity' => 3, 'domain' => 'custom', 'rounds' => 3, 'timer' => false];
+        $this->seat(0)->postJson('/rooms/'.$room['id'].'/settings', $settings)->assertOk()->assertJsonPath('hostEditing', false);
+        $room = $this->seat(1)->getJson('/rooms/'.$room['id'])->assertOk()->assertJsonPath('hostEditing', false)
+            ->assertJsonCount(2, 'members')->assertJsonPath('settings.capacity', 3)->json();
+        $room = $this->seat(0)->postJson('/rooms/'.$room['id'].'/editing', ['version' => $room['version'], 'editing' => true])->assertOk()->json();
+        $this->seat(0)->postJson('/rooms/'.$room['id'].'/editing', ['version' => $room['version'], 'editing' => false])->assertOk()->assertJsonPath('hostEditing', false);
+    }
+
     public function test_four_online_players_finish_with_equal_rosters(): void
     {
         $room = $this->begin($this->lobby(4));

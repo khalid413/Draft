@@ -84,10 +84,18 @@ export const onlineRoom = {
             return false;
         } finally { this.busy = false; }
     },
-    editRoomSettings() {
-        this.settings = { ...this.room.settings, players: Array.from({length:this.room.settings.capacity}, (_, i) => this.room.members[i]?.name || ''), catalog: this.room.settings.catalog || '' };
+    async editRoomSettings() {
+        // Other seats stay in the lobby and see a notice while the host is in the settings.
+        if (!await this.roomAction('editing', { editing: true })) return;
+        const host = this.room.members[this.room.host]?.name || '';
+        this.settings = { ...this.room.settings, players: Array.from({length:this.room.settings.capacity}, (_, i) => i === 0 ? host : ''), catalog: this.room.settings.catalog || '' };
         this.playStyle = 'online'; this.editingRoom = true; this.screen = 'setup';
     },
+    cancelRoomSettings() {
+        this.editingRoom = false; this.screen = 'lobby';
+        this.roomAction('editing', { editing: false });
+    },
+    rematch() { return this.roomAction('rematch'); },
     // The code is what friends type on the Join screen; the link is an optional shortcut.
     copyCode() { return this.copyText(this.room.code, 'copiedCode', 'Copy this room code: ' + this.room.code); },
     copyInvite() { const link = `${location.origin}/?join=${this.room.code}`; return this.copyText(link, 'copiedInvite', 'Copy this invite link: ' + link); },

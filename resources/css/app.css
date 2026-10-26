@@ -343,3 +343,6 @@ footer { min-height:100px; display:flex; align-items:center; justify-content:spa
 .lobby-actions>button { min-width:150px; }
 @media(min-width:601px) and (max-width:1024px) { .lobby-screen { max-width:620px; margin-inline:auto; } }
 @media(max-width:600px) { .room-code-row { flex-wrap:nowrap; }.room-code-value { font-size:clamp(20px,7vw,28px); letter-spacing:3px; }.lobby-actions>button { min-width:0; } }
+.lobby-seat.editing .seat-state { display:inline-flex; align-items:center; gap:7px; color:var(--gold); background:#ffc85714; }.lobby-seat.editing .seat-state::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--gold); animation:seat-pulse 1.4s ease-in-out infinite; }
+@keyframes seat-pulse { 50% { opacity:.3; } }
+@media(prefers-reduced-motion:reduce) { .lobby-seat.editing .seat-state::before { animation:none; } }

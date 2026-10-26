@@ -5,6 +5,7 @@ import arrowLeft from 'bootstrap-icons/icons/arrow-left.svg?raw';
 import arrowLeftRight from 'bootstrap-icons/icons/arrow-left-right.svg?raw';
 import arrowRight from 'bootstrap-icons/icons/arrow-right.svg?raw';
 import arrowUpRight from 'bootstrap-icons/icons/arrow-up-right.svg?raw';
+import boxArrowRight from 'bootstrap-icons/icons/box-arrow-right.svg?raw';
 import checkLg from 'bootstrap-icons/icons/check-lg.svg?raw';
 import copy from 'bootstrap-icons/icons/copy.svg?raw';
 import image from 'bootstrap-icons/icons/image.svg?raw';
@@ -26,7 +27,7 @@ import xLg from 'bootstrap-icons/icons/x-lg.svg?raw';
 
 const icons = {
     'arrow-counterclockwise': arrowCounterclockwise, 'arrow-left': arrowLeft, 'arrow-left-right': arrowLeftRight,
-    'arrow-right': arrowRight, 'arrow-up-right': arrowUpRight, 'check-lg': checkLg, copy, image, layers,
+    'arrow-right': arrowRight, 'arrow-up-right': arrowUpRight, 'box-arrow-right': boxArrowRight, 'check-lg': checkLg, copy, image, layers,
     'lightning-charge': lightningCharge, lock, 'music-note-beamed': musicNoteBeamed, 'pause-fill': pauseFill, phone,
     'play-fill': playFill, share, 'skip-backward': skipBackward, 'skip-forward': skipForward, stars, trophy,
     'volume-mute': volumeMute, 'volume-up': volumeUp, 'x-lg': xLg,

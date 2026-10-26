@@ -50,5 +50,5 @@ Route::prefix('rooms')->middleware('throttle:rooms')->controller(RoomController:
     Route::post('/broadcast-auth', 'broadcastAuth')->block();
     Route::get('/{room}', 'state')->block();
     Route::post('/{room}/settings', 'settings')->block();
-    Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'leave', 'start', 'pick', 'next', 'finish', 'timeout', 'replay'])->block();
+    Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'editing', 'leave', 'start', 'pick', 'next', 'finish', 'timeout', 'replay', 'rematch'])->block();
 });
