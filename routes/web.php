@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminRoomController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\SongController;
 use App\Http\Middleware\RequireAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,14 @@ Route::get('/admin/login', fn () => view('admin.login'))->name('admin.login');
 Route::post('/admin/login', [AdminController::class, 'login'])->middleware('throttle:5,1');
 Route::get('/admin', [GameController::class, 'setup'])->middleware(RequireAdmin::class)->name('admin');
 Route::post('/admin/logout', [AdminController::class, 'logout'])->middleware(RequireAdmin::class);
+Route::get('/music', [SongController::class, 'playlist'])->middleware('throttle:60,1');
+Route::get('/music/{song}/audio', [SongController::class, 'audio'])->whereNumber('song');
+Route::middleware(RequireAdmin::class)->prefix('admin/music')->controller(SongController::class)->group(function () {
+    Route::get('/', 'index')->name('admin.music');
+    Route::post('/', 'store')->name('admin.music.store')->middleware('throttle:20,1');
+    Route::post('/{song}/move', 'move')->name('admin.music.move')->middleware('throttle:60,1');
+    Route::delete('/{song}', 'destroy')->name('admin.music.destroy')->middleware('throttle:30,1');
+});
 Route::middleware(RequireAdmin::class)->prefix('admin/rooms')->controller(AdminRoomController::class)->group(function () {
     Route::get('/', 'index')->name('admin.rooms');
     Route::post('/{room}/ban', 'ban')->name('admin.rooms.ban')->middleware('throttle:30,1');

@@ -1,16 +1,18 @@
 import { gameClient } from './gameClient';
 import { onlineRoom } from './onlineRoom';
+import { musicPlayer } from './music';
 import { createCardActivation } from './cardActivation';
 import { sound, muteSounds, tiltCards, revealCards, flyCards, celebrate, enterPass, iconReveal } from './animations';
 import { Notyf } from 'notyf';
-import { createIcons, ImagePlus, ArrowRight, ArrowUpRight, ArrowLeft, ArrowRightLeft, Check, CircleHelp, Clapperboard, Flame, Goal, Layers2, LockKeyhole, RotateCcw, ShieldCheck, Shuffle, Smartphone, Sparkles, Swords, Timer, Trophy, UsersRound, Volume2, VolumeX, X, Zap } from 'lucide';
+import { createIcons, ImagePlus, ArrowRight, ArrowUpRight, ArrowLeft, ArrowRightLeft, Check, CircleHelp, Clapperboard, Flame, Goal, Layers2, LockKeyhole, Music, Pause, Play, RotateCcw, ShieldCheck, Shuffle, SkipBack, SkipForward, Smartphone, Sparkles, Swords, Timer, Trophy, UsersRound, Volume2, VolumeX, X, Zap } from 'lucide';
 
-const icons = { ImagePlus, ArrowRight, ArrowUpRight, ArrowLeft, ArrowRightLeft, Check, CircleHelp, Clapperboard, Flame, Goal, Layers2, LockKeyhole, RotateCcw, ShieldCheck, Shuffle, Smartphone, Sparkles, Swords, Timer, Trophy, UsersRound, Volume2, VolumeX, X, Zap };
+const icons = { ImagePlus, ArrowRight, ArrowUpRight, ArrowLeft, ArrowRightLeft, Check, CircleHelp, Clapperboard, Flame, Goal, Layers2, LockKeyhole, Music, Pause, Play, RotateCcw, ShieldCheck, Shuffle, SkipBack, SkipForward, Smartphone, Sparkles, Swords, Timer, Trophy, UsersRound, Volume2, VolumeX, X, Zap };
 const notify = new Notyf({ duration: 3500, position: { x: 'right', y: 'bottom' } });
 const drawIcons = () => createIcons({ icons, attrs: { 'aria-hidden': 'true' } });
 
 export default (initialCardCount = 0, initialFootballInventory = [], initialCatalogs = []) => ({
     ...onlineRoom,
+    ...musicPlayer,
     get online() { return !!this.room; },
     get myTurn() { return !this.online || this.room.viewerIndex === this.game?.activePlayer; },
     get everyoneReady() { return Array.isArray(this.room?.members) && this.room.members.length === this.room.settings.capacity && this.room.members.every(member => member.ready); },
@@ -46,6 +48,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     async init() {
         try { this.muted = localStorage.getItem('draft-duel-muted') !== 'false'; } catch {}
         muteSounds(this.muted);
+        this.loadSongs();
         const invitation = new URLSearchParams(location.search).get('join');
         let savedRoom = null; try { savedRoom = sessionStorage.getItem('draft-room-id'); } catch {}
         if (this.$el.dataset.admin === 'true') { this.loading = false; await this.openLibrary('custom'); }
@@ -64,7 +67,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
         this.visibilityHandler = () => { if (!document.hidden && !this.busy) this.refresh(); };
         document.addEventListener('visibilitychange', this.visibilityHandler);
     },
-    destroy() { this.stopRoomWatch?.(); cancelAnimationFrame(this.matchFrame); this.releasePreview(); clearInterval(this.tick); window.removeEventListener('beforeunload', this.unloadHandler); document.removeEventListener('visibilitychange', this.visibilityHandler); },
+    destroy() { this.stopMusic(); this.stopRoomWatch?.(); cancelAnimationFrame(this.matchFrame); this.releasePreview(); clearInterval(this.tick); window.removeEventListener('beforeunload', this.unloadHandler); document.removeEventListener('visibilitychange', this.visibilityHandler); },
     selectDraft(domain) {
         this.settings.domain = domain;
         if (domain !== 'custom') this.settings.catalog = '';

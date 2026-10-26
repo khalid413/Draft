@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('content')
 <div class="app-shell admin-rooms">
-    <header class="site-header"><a href="/" class="wordmark"><span class="brand-mark"><i data-lucide="layers-2"></i></span>DRAFT<span>DUEL</span></a><nav aria-label="Admin controls" class="admin-nav"><span class="eyebrow">ADMIN</span><a href="/admin" class="text-link">Cards</a><a href="{{ route('admin.rooms') }}" class="text-link" aria-current="page">Rooms</a><form method="POST" action="/admin/logout">@csrf<button class="secondary-button">Sign out</button></form></nav></header>
+    <header class="site-header"><a href="/" class="wordmark"><span class="brand-mark"><i data-lucide="layers-2"></i></span>DRAFT<span>DUEL</span></a><nav aria-label="Admin controls" class="admin-nav"><span class="eyebrow">ADMIN</span><a href="/admin" class="text-link">Cards</a><a href="{{ route('admin.rooms') }}" class="text-link" aria-current="page">Rooms</a><a href="{{ route('admin.music') }}" class="text-link">Music</a><form method="POST" action="/admin/logout">@csrf<button class="secondary-button">Sign out</button></form></nav></header>
     <main>
         <div class="admin-rooms-head"><h1>Rooms</h1><p>Every online room, newest activity first. Ban closes a room for all of its players.</p></div>
         @if(session('status'))<div class="status-banner" role="status">{{ session('status') }}</div>@endif

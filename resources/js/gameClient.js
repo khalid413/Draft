@@ -46,6 +46,7 @@ export const gameClient = {
         const timer = setInterval(onChange, 2000);
         return () => { clearInterval(timer); echo?.disconnect(); };
     },
+    songs: () => request('/music'),
     state: () => request('/game/state'),
     start: (settings, replace = false) => request('/game/start', { ...settings, replace }),
     action: (action, version, payload = {}) => request(`/game/${action}`, { ...payload, version }),

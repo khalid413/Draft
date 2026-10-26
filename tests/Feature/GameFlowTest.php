@@ -77,7 +77,7 @@ class GameFlowTest extends TestCase
 
     public function test_demo_is_not_available_in_setup_or_start_endpoint(): void
     {
-        $this->get('/')->assertOk()->assertSee('Character cards', false)->assertDontSee('Anime demo')->assertDontSee('/images/cards/');
+        $this->get('/')->assertOk()->assertSee('Draft Party', false)->assertDontSee('Anime demo')->assertDontSee('/images/cards/');
         $this->postJson('/game/start', ['players' => ['Alex', 'Sam'], 'domain' => 'anime', 'rounds' => 3, 'timer' => false])->assertUnprocessable()->assertJsonValidationErrors('domain');
     }
 }
