@@ -19,11 +19,21 @@ DOMAIN=draft.yourdomain.com EMAIL=you@yourdomain.com bash /tmp/draft-setup/deplo
 
 The script installs Nginx, PHP 8.3, Node, Composer, Supervisor and Certbot; puts the app in `/var/www/draft-duel`; writes `.env` from `deploy/env.production.example` with a fresh app key and Reverb credentials; builds the frontend; migrates and seeds the football players; starts Reverb; gets a Let's Encrypt certificate; and opens only SSH, HTTP and HTTPS in the firewall.
 
-Then create the admin account (it asks for an email and a 12+ character password):
+Then create the admin account, either way:
 
-```bash
-cd /var/www/draft-duel && sudo -u www-data php artisan draft:admin
-```
+- **Interactive:** asks for an email and a 12+ character password.
+
+  ```bash
+  cd /var/www/draft-duel && sudo -u www-data php artisan draft:admin
+  ```
+
+- **From `.env` (AdminSeeder):** set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `/var/www/draft-duel/.env` (quote the password if it has special characters), then rebuild the config cache and seed:
+
+  ```bash
+  cd /var/www/draft-duel && sudo -u www-data php artisan optimize && sudo -u www-data php artisan db:seed --class=AdminSeeder --force
+  ```
+
+Never put the admin password in the repository: it is public.
 
 ## Shipping updates
 

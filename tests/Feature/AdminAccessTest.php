@@ -35,6 +35,25 @@ class AdminAccessTest extends TestCase
         $this->getJson('/cards')->assertForbidden();
     }
 
+    public function test_admin_seeder_uses_server_config_and_skips_when_unset(): void
+    {
+        config(['admin.email' => null, 'admin.password' => null]);
+        $this->seed(\Database\Seeders\AdminSeeder::class);
+        $this->assertSame(0, User::where('is_admin', true)->count());
+
+        config(['admin.email' => 'owner@example.test', 'admin.password' => 'short']);
+        $this->seed(\Database\Seeders\AdminSeeder::class);
+        $this->assertSame(0, User::where('is_admin', true)->count());
+
+        config(['admin.email' => 'owner@example.test', 'admin.password' => 'a-long-seeded-password']);
+        $this->seed(\Database\Seeders\AdminSeeder::class);
+        $this->seed(\Database\Seeders\AdminSeeder::class);
+        $admin = User::where('email', 'owner@example.test')->sole();
+        $this->assertTrue($admin->is_admin);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('a-long-seeded-password', $admin->password));
+        $this->post('/admin/login', ['email' => 'owner@example.test', 'password' => 'a-long-seeded-password'])->assertRedirect('/admin');
+    }
+
     public function test_admin_is_created_only_through_the_private_setup_command(): void
     {
         $this->artisan('draft:admin')

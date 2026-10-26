@@ -15,6 +15,6 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        $this->call([FootballPlayerSeeder::class]);
+        $this->call([FootballPlayerSeeder::class, AdminSeeder::class]);
     }
 }
