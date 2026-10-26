@@ -43,7 +43,7 @@ To test with multiple people, use separate browser profiles/devices. Tabs in one
 
 ## Production deployment gate
 
-This implementation is locally functional, **not deployed to a public host**. The project's requested Laravel 11 dependency currently has Composer security advisories and is outside supported security maintenance. Upgrade to a supported, patched Laravel release before exposing it publicly; do not suppress the audit warnings. The app uses session authentication rather than TokenGuard, does not use temporary signed URLs, and has no email-sending flow, but those facts do not replace a framework upgrade.
+The project now runs on a patched Laravel 12 release; `composer audit` and `npm audit` report no advisories. Keep running both before each deployment and upgrade rather than suppress any new warning. Step-by-step VPS setup is in [DEPLOY.md](DEPLOY.md).
 
 Production also needs HTTPS/WSS, `APP_DEBUG=false`, secure session cookies, trusted proxy settings for the chosen host, a supervised Reverb process, exact allowed origins, and persistent shared database/session/cache storage. The frontend connects to Reverb on the same hostname as the website using the configured port; a TLS reverse proxy can expose that on 443. Set the server-side Reverb host/port/scheme to the address the PHP application can reach.
 

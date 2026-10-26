@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}">
-    <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port', 8080) }}">
+    <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.client_port', 8080) }}">
     <meta name="theme-color" content="#0B0F1A">
     <meta name="description" content="Two rivals. One screen. Draft original heroes, trust your instincts, and own the arena.">
     <title>Draft Duel — Trust your pick.</title>

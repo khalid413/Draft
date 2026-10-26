@@ -1,6 +1,6 @@
 # Draft Duel — Phase 1
 
-Working Laravel 11 / Blade / Tailwind 3 / Alpine application. All application files are in this repository; no code fragments need to be copied from chat.
+Working Laravel 12 / Blade / Tailwind 3 / Alpine application. All application files are in this repository; no code fragments need to be copied from chat.
 
 ## Football draft + anime power update
 
@@ -171,7 +171,7 @@ npm run build
 php artisan view:cache
 ```
 
-Dependency caveat: Laravel 11 was explicitly requested. Composer reported security advisories for Laravel 11.57.0 and initial resolution needed `composer update --no-security-blocking`. That was a one-command exception; the project does not globally disable Composer's security blocking. Keep this Phase 1 app local. Upgrade to a supported/patched Laravel release before exposing Phase 2 online, and run `composer audit` / `npm audit`. Current lockfiles preserve the exact tested versions.
+Dependency note: the app started on Laravel 11.57.0, which had unpatched Composer security advisories. It has since been upgraded to a patched Laravel 12 release and `composer audit` / `npm audit` are clean. Run both before every deployment; see [DEPLOY.md](DEPLOY.md).
 
 Visual verification limitation: the in-app browser could not attach, and Windows Computer Use stopped because it could not confidently determine Chrome's URL. Automated engine/HTTP tests and the production build are verified; no desktop/mobile screenshot verification is claimed.
 

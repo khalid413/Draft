@@ -5,6 +5,8 @@ return [
     'connections' => [
         'reverb' => [
             'driver' => 'reverb', 'key' => env('REVERB_APP_KEY'), 'secret' => env('REVERB_APP_SECRET'), 'app_id' => env('REVERB_APP_ID'),
+            // Port browsers use (443 behind an HTTPS proxy); PHP itself talks to Reverb on options.port.
+            'client_port' => env('REVERB_CLIENT_PORT', env('REVERB_PORT', 8080)),
             'options' => ['host' => env('REVERB_HOST', '127.0.0.1'), 'port' => env('REVERB_PORT', 8080), 'scheme' => env('REVERB_SCHEME', 'http'), 'useTLS' => env('REVERB_SCHEME', 'http') === 'https'],
             'client_options' => ['timeout' => 2, 'connect_timeout' => 1],
         ],

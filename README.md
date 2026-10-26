@@ -2,7 +2,7 @@
 
 Private online rooms and the protected admin area are implemented. See [ONLINE.md](ONLINE.md) for admin account creation, Reverb startup, room behavior, and deployment requirements.
 
-Local hot-seat drafting for 2–4 players, built with Laravel 11, Blade, Tailwind and Alpine.
+Local hot-seat drafting for 2–4 players, built with Laravel 12, Blade, Tailwind and Alpine. Deployment: see [DEPLOY.md](DEPLOY.md).
 
 Choose the player count in New game. Character drafts award 3, 5 or 7 cards per player. For three players, each turn has two selectable cards plus a private random third card for the remaining player; roles rotate. For four players, two rotating pairs draft each round. All cards are unique within a game.
 
