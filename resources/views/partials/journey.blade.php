@@ -1,14 +1,14 @@
 <section x-cloak x-show="!loading && screen === 'home'" class="welcome-screen">
     <div class="welcome-orbit" aria-hidden="true"><span>?</span><span>✦</span></div>
     <span class="eyebrow">ONE PICK CHANGES EVERYTHING</span><h1>DRAFT<span>DUEL</span></h1><p>Your instinct. Your team. Your moment.</p>
-    <button class="primary-button" @click="screen = 'modes'">Enter the arena <i data-lucide="arrow-right"></i></button>
+    <button class="primary-button" @click="screen = 'modes'">Enter the arena <i data-icon="arrow-right"></i></button>
     <button x-show="game || room" class="text-link" @click="screen = room ? (room.game ? 'arena' : 'lobby') : 'arena'">Resume your game</button>
 </section>
 
 <section x-cloak x-show="!loading && screen === 'modes'" class="journey-screen">
     <span class="eyebrow">PICK YOUR GAME</span><h1>Let's play.</h1><p>Good friends. Tough choices.</p>
-    <button class="mode-feature" @click="screen = 'draft-type'"><span class="mode-art"><i data-lucide="layers-2"></i><b>?</b></span><span><strong>Draft</strong><small>Keep one. Give one. Own the result.</small></span><i data-lucide="arrow-up-right"></i></button>
-    <button class="secondary-button" @click="screen = 'join'">Join a room <i data-lucide="arrow-right"></i></button>
+    <button class="mode-feature" @click="screen = 'draft-type'"><span class="mode-art"><i data-icon="layers"></i><b>?</b></span><span><strong>Draft</strong><small>Keep one. Give one. Own the result.</small></span><i data-icon="arrow-up-right"></i></button>
+    <button class="secondary-button" @click="screen = 'join'">Join a room <i data-icon="arrow-right"></i></button>
     <button class="admin-corner" @click="adminTap()" aria-label="Administrator access: activate three times"><span>· · ·</span></button>
 </section>
 
@@ -29,13 +29,24 @@
 </section>
 
 <section x-cloak x-show="!loading && screen === 'lobby' && room" class="journey-screen lobby-screen">
-    <div class="lobby-top"><span class="eyebrow" x-text="room?.settings.domain === 'football' ? 'FOOTBALL LOBBY' : 'DRAFT PARTY LOBBY'"></span><span class="connection-pill" x-text="connectionStatus"></span></div>
-    <h1>Bring your rivals.</h1><button class="room-code" @click="copyInvite()" :aria-label="'Copy invitation for room ' + room?.code"><span x-text="room?.code"></span><small x-text="copiedInvite ? 'Copied!' : 'Copy invite ↗'"></small></button>
-    <div class="lobby-seats"><template x-for="i in room?.settings.capacity || 0" :key="i"><div :class="playerClass(i - 1)"><span class="seat-avatar" x-text="room?.members?.[i-1]?.name.charAt(0) || '+'"></span><strong x-text="room?.members?.[i-1]?.name || 'Waiting for a friend'"></strong><small x-text="room?.members?.[i-1] ? (room.members[i-1].ready ? '✓ Ready' : 'Not ready') : 'Open seat'"></small><span x-show="i - 1 === room?.host" class="host-tag">Host</span></div></template></div>
-    <p class="lobby-settings" x-text="roomSummary"></p>
-    <div class="lobby-actions"><button class="secondary-button" @click="roomAction('ready', { ready: !room.members[room.viewerIndex].ready })" :disabled="busy" x-text="room?.members?.[room?.viewerIndex]?.ready ? 'Not ready' : 'I’m ready'"></button><button x-show="room?.isHost" class="primary-button" @click="roomAction('start')" :disabled="busy || !everyoneReady">Start draft →</button></div>
+    <div class="lobby-top"><span class="eyebrow" x-text="room?.settings.domain === 'football' ? 'FOOTBALL LOBBY' : 'DRAFT PARTY LOBBY'"></span><span class="connection-pill" :class="{ live: connectionStatus === 'Live' }" role="status"><span class="connection-dot" aria-hidden="true"></span><span x-text="connectionStatus"></span></span></div>
+    <h1>Bring your rivals.</h1><p class="lobby-intro">Friends join with the room code. When every seat is ready, the host starts the draft.</p>
+    <div class="room-code-card"><div class="room-code-label"><span class="eyebrow">ROOM CODE</span><span class="copy-status" role="status" x-text="copiedCode ? 'Code copied' : (copiedInvite ? 'Invite link copied' : '')"></span></div>
+        <div class="room-code-row"><strong class="room-code-value" x-text="room?.code"></strong><div class="room-code-actions">
+            <button class="icon-button" :class="{ copied: copiedCode }" @click="copyCode()" aria-label="Copy room code" title="Copy room code"><span x-show="!copiedCode"><i data-icon="copy"></i></span><span x-show="copiedCode"><i data-icon="check-lg"></i></span></button>
+            <button class="icon-button" :class="{ copied: copiedInvite }" @click="copyInvite()" aria-label="Copy invite link" title="Copy invite link"><span x-show="!copiedInvite"><i data-icon="share"></i></span><span x-show="copiedInvite"><i data-icon="check-lg"></i></span></button>
+        </div></div>
+    </div>
+    <div class="lobby-progress"><div class="lobby-meter" aria-hidden="true"><span :style="`width:${room ? lobbyReadyCount / room.settings.capacity * 100 : 0}%`"></span></div><p x-text="lobbyHint" aria-live="polite"></p></div>
+    <div class="lobby-seats"><template x-for="i in room?.settings.capacity || 0" :key="i"><div class="lobby-seat" :class="playerClass(i - 1) + (room?.members?.[i-1] ? (room.members[i-1].ready ? ' ready' : '') : ' open')">
+        <span class="seat-avatar" x-text="(room?.members?.[i-1]?.name.charAt(0) || '+').toUpperCase()"></span>
+        <div class="seat-info"><strong x-text="room?.members?.[i-1]?.name || 'Waiting for a friend…'"></strong><span class="seat-tags"><span x-show="room?.members?.[i-1] && i - 1 === room?.host" class="seat-tag host">Host</span><span x-show="room?.members?.[i-1] && i - 1 === room?.viewerIndex" class="seat-tag you">You</span></span></div>
+        <span class="seat-state" x-text="room?.members?.[i-1] ? (room.members[i-1].ready ? 'Ready' : 'Not ready') : 'Open seat'"></span>
+    </div></template></div>
+    <ul class="lobby-chips" aria-label="Room settings"><template x-for="chip in lobbyChips" :key="chip"><li x-text="chip"></li></template></ul>
+    <div class="lobby-actions"><button x-show="!room?.members?.[room?.viewerIndex]?.ready" class="ready-button" @click="roomAction('ready', { ready: true })" :disabled="busy">Ready</button><button x-show="room?.members?.[room?.viewerIndex]?.ready" class="secondary-button" @click="roomAction('ready', { ready: false })" :disabled="busy">Undo</button><button x-show="room?.isHost" class="primary-button" @click="roomAction('start')" :disabled="busy || !everyoneReady">Start draft →</button></div>
     <div class="lobby-links"><button x-show="room?.isHost" class="text-link" @click="editRoomSettings()">Edit settings</button><button class="text-link" @click="openModal('leave-room')" >Leave room</button></div>
 </section>
 <x-modal name="leave-room" title="Leave this room?"><p class="modal-copy" x-text="room?.isHost ? (room?.members?.filter(member => !member.left).length > 1 ? 'Hosting passes to the next player and the room stays open.' + (room?.status === 'playing' ? ' Your remaining picks are made at random.' : '') : 'You are the last player, so the room will close.') : 'Your lobby seat will become available to someone else.'"></p><div class="modal-actions"><button class="secondary-button" @click="closeModal()">Stay</button><button class="primary-button" @click="leaveRoom()" :disabled="busy">Leave room</button></div></x-modal>
 
-<x-modal name="room-info" title="Your room"><p class="modal-copy"><span x-text="room?.code"></span> · Your seat is saved on this browser.</p><div class="modal-actions"><button class="secondary-button" @click="copyInvite()" x-text="copiedInvite ? 'Copied!' : 'Copy invitation'"></button><button x-show="room?.isHost" class="secondary-button" @click="closeModal(); openModal('leave-room')">Leave room</button><button class="primary-button" @click="closeModal()">Back to game</button></div></x-modal>
+<x-modal name="room-info" title="Your room"><p class="modal-copy"><span x-text="room?.code"></span> · Your seat is saved on this browser.</p><div class="modal-actions"><button class="secondary-button" @click="copyCode()" x-text="copiedCode ? 'Copied!' : 'Copy room code'"></button><button x-show="room?.isHost" class="secondary-button" @click="closeModal(); openModal('leave-room')">Leave room</button><button class="primary-button" @click="closeModal()">Back to game</button></div></x-modal>

@@ -4,6 +4,6 @@
     <div class="card-information">
         <span class="eyebrow" x-show="card.series" x-text="card.series"></span>
         <h3 x-text="card.name"></h3>
-        <div class="card-power"><span><i data-lucide="zap"></i><span x-text="isFootball ? 'OVR' : 'POWER'"></span></span><strong :data-power="card.power" x-text="card.power"></strong></div>
+        <div class="card-power"><span><i data-icon="lightning-charge"></i><span x-text="isFootball ? 'OVR' : 'POWER'"></span></span><strong :data-power="card.power" x-text="card.power"></strong></div>
     </div>
 </div>

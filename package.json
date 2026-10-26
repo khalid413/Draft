@@ -19,12 +19,12 @@
         "@tsparticles/engine": "^3.9.1",
         "@tsparticles/slim": "^3.9.1",
         "alpinejs": "^3.17.5",
+        "bootstrap-icons": "^1.13.2",
         "canvas-confetti": "^1.9.4",
         "countup.js": "^2.10.1",
         "gsap": "^3.15.0",
         "howler": "^2.2.4",
         "laravel-echo": "^2.6.1",
-        "lucide": "^1.61.0",
         "notyf": "^3.10.0",
         "pusher-js": "^8.6.0",
         "vanilla-tilt": "^1.8.1"

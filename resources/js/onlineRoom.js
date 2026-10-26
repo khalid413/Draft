@@ -3,7 +3,7 @@ import { celebrate } from './animations';
 
 export const onlineRoom = {
     room: null, playStyle: 'local', editingRoom: false, connectionStatus: 'Connecting…',
-    joinCode: '', joinName: '', copiedInvite: false, roomRefreshPending: false,
+    joinCode: '', joinName: '', copiedCode: false, copiedInvite: false, copyTimer: null, roomRefreshPending: false,
     stopRoomWatch: null, playbackKey: '', adminClicks: [],
     adminTap() {
         const now = performance.now();
@@ -31,7 +31,7 @@ export const onlineRoom = {
         finally { this.busy = false; }
     },
     async connectRoom(room) {
-        this.stopRoomWatch?.(); this.copiedInvite = false; this.playStyle = 'online'; this.game = null; this.room = null; this.playbackKey = '';
+        this.stopRoomWatch?.(); this.copiedCode = false; this.copiedInvite = false; this.playStyle = 'online'; this.game = null; this.room = null; this.playbackKey = '';
         try { sessionStorage.setItem('draft-room-id', room.id); } catch {}
         await this.acceptRoom(room);
         this.stopRoomWatch = gameClient.watchRoom(room.id, () => this.refreshRoom(), status => { this.connectionStatus = status; });
@@ -88,9 +88,17 @@ export const onlineRoom = {
         this.settings = { ...this.room.settings, players: Array.from({length:this.room.settings.capacity}, (_, i) => this.room.members[i]?.name || ''), catalog: this.room.settings.catalog || '' };
         this.playStyle = 'online'; this.editingRoom = true; this.screen = 'setup';
     },
-    async copyInvite() {
-        try { await navigator.clipboard.writeText(`${location.origin}/?join=${this.room.code}`); this.copiedInvite = true; }
-        catch { this.error = 'Copy this room code: ' + this.room.code; }
+    // The code is what friends type on the Join screen; the link is an optional shortcut.
+    copyCode() { return this.copyText(this.room.code, 'copiedCode', 'Copy this room code: ' + this.room.code); },
+    copyInvite() { const link = `${location.origin}/?join=${this.room.code}`; return this.copyText(link, 'copiedInvite', 'Copy this invite link: ' + link); },
+    async copyText(text, flag, fallback) {
+        try {
+            await navigator.clipboard.writeText(text);
+            clearTimeout(this.copyTimer);
+            this.copiedCode = false; this.copiedInvite = false; // Only the latest copy shows as done.
+            this[flag] = true;
+            this.copyTimer = setTimeout(() => { this[flag] = false; }, 2000);
+        } catch { this.error = fallback; }
     },
     disconnectRoom() {
         this.stopRoomWatch?.(); this.stopRoomWatch = null; this.room = null; this.game = null;

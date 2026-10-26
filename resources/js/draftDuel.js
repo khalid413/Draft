@@ -4,11 +4,10 @@ import { musicPlayer } from './music';
 import { createCardActivation } from './cardActivation';
 import { sound, muteSounds, tiltCards, revealCards, flyCards, celebrate, enterPass, iconReveal } from './animations';
 import { Notyf } from 'notyf';
-import { createIcons, ImagePlus, ArrowRight, ArrowUpRight, ArrowLeft, ArrowRightLeft, Check, CircleHelp, Clapperboard, Flame, Goal, Layers2, LockKeyhole, Music, Pause, Play, RotateCcw, ShieldCheck, Shuffle, SkipBack, SkipForward, Smartphone, Sparkles, Swords, Timer, Trophy, UsersRound, Volume2, VolumeX, X, Zap } from 'lucide';
+import { renderIcons } from './icons';
 
-const icons = { ImagePlus, ArrowRight, ArrowUpRight, ArrowLeft, ArrowRightLeft, Check, CircleHelp, Clapperboard, Flame, Goal, Layers2, LockKeyhole, Music, Pause, Play, RotateCcw, ShieldCheck, Shuffle, SkipBack, SkipForward, Smartphone, Sparkles, Swords, Timer, Trophy, UsersRound, Volume2, VolumeX, X, Zap };
 const notify = new Notyf({ duration: 3500, position: { x: 'right', y: 'bottom' } });
-const drawIcons = () => createIcons({ icons, attrs: { 'aria-hidden': 'true' } });
+const drawIcons = () => renderIcons();
 
 export default (initialCardCount = 0, initialFootballInventory = [], initialCatalogs = []) => ({
     ...onlineRoom,
@@ -16,7 +15,14 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     get online() { return !!this.room; },
     get myTurn() { return !this.online || this.room.viewerIndex === this.game?.activePlayer; },
     get everyoneReady() { return Array.isArray(this.room?.members) && this.room.members.length === this.room.settings.capacity && this.room.members.every(member => member.ready); },
-    get roomSummary() { const s = this.room?.settings; return s ? (s.domain === 'football' ? '4–3–3' : (s.catalog || 'All characters') + ' · ' + s.rounds + ' rounds') + ' · ' + (s.timer ? '30s timer' : 'No timer') : ''; },
+    get lobbyChips() { const s = this.room?.settings; return s ? [s.domain === 'football' ? 'Football 4–3–3' : (s.catalog || 'All characters'), ...(s.domain === 'football' ? [] : [s.rounds + ' rounds']), s.capacity + ' players', s.timer ? '30s timer' : 'No timer'] : []; },
+    get lobbyReadyCount() { return (this.room?.members || []).filter(member => member.ready).length; },
+    get lobbyHint() {
+        const capacity = this.room?.settings.capacity || 0, missing = capacity - (this.room?.members?.length || 0);
+        if (missing > 0) return `Waiting for ${missing} more player${missing === 1 ? '' : 's'}. Share the room code.`;
+        if (!this.everyoneReady) return `${this.lobbyReadyCount} of ${capacity} ready. Waiting for everyone to tap ready.`;
+        return this.room.isHost ? 'Everyone is ready. Start the draft!' : 'Everyone is ready. Waiting for the host to start.';
+    },
     selectedMatchIndex: 0,
     get matches() { return this.game?.results?.league?.matches || (this.game?.results?.match ? [this.game.results.match] : []); },
     get matchPlayers() { return (this.matches[this.selectedMatchIndex]?.playerIndices || [0, 1]).map(index => this.game?.players?.[index]); },

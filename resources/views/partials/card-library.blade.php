@@ -1,6 +1,6 @@
 <section x-cloak x-show="!loading && screen === 'library'" class="library-screen" :class="{'football-library': libraryDomain === 'football'}">
     <div class="library-tabs" role="group" aria-label="Card library"><button :class="libraryDomain === 'custom' ? 'selected' : ''" @click="openLibrary('custom')" :disabled="savingCard || libraryLoading">Character cards</button><button :class="libraryDomain === 'football' ? 'selected' : ''" @click="openLibrary('football')" :disabled="savingCard || libraryLoading">Football players</button></div>
-    <div class="library-heading"><div><h1 x-text="libraryDomain === 'football' ? 'Football players' : 'Character cards'"></h1><p><span x-text="libraryCount"></span> saved</p></div><button class="secondary-button" @click="leaveLibrary('home')" :disabled="savingCard">Play <i data-lucide="arrow-right"></i></button></div>
+    <div class="library-heading"><div><h1 x-text="libraryDomain === 'football' ? 'Football players' : 'Character cards'"></h1><p><span x-text="libraryCount"></span> saved</p></div><button class="secondary-button" @click="leaveLibrary('home')" :disabled="savingCard">Play <i data-icon="arrow-right"></i></button></div>
     <div x-show="libraryDomain === 'football'" class="position-inventory"><template x-for="item in footballInventory" :key="item.position"><span :class="item.missing ? '' : 'complete'"><b x-text="item.position"></b><span x-text="item.count + '/' + item.needed"></span></span></template></div>
     <div class="library-layout">
         <form class="card-editor" x-ref="cardEditor" @submit.prevent="saveCard()">
@@ -8,7 +8,7 @@
             <label class="image-upload" :class="{'has-preview': cardPreview}">
                 <input x-ref="cardImage" type="file" accept="image/jpeg,image/png,image/webp" @change="selectImage($event)" :disabled="savingCard" aria-label="Upload card picture">
                 <template x-if="cardPreview"><img :src="cardPreview" alt="Your card preview"></template>
-                <span class="upload-prompt" x-show="!cardPreview"><i data-lucide="image-plus"></i><strong>Choose a picture</strong><small>JPG, PNG or WebP · up to 5 MB</small></span>
+                <span class="upload-prompt" x-show="!cardPreview"><i data-icon="image"></i><strong>Choose a picture</strong><small>JPG, PNG or WebP · up to 5 MB</small></span>
                 <span x-show="cardPreview" class="change-picture">Change picture</span>
             </label>
             <label class="editor-field">Name<input x-ref="cardName" x-model="cardForm.name" required maxlength="60" :placeholder="libraryDomain === 'football' ? 'Player name' : 'Card name'" autocomplete="off" :disabled="savingCard"></label>
@@ -19,11 +19,11 @@
                 <label class="icon-toggle"><input type="checkbox" x-model="cardForm.is_icon" :disabled="savingCard || libraryDomain !== 'football'"><span><strong>★ Icon</strong><small>Special gold reveal</small></span></label>
             </div>
             <p x-show="cardError" x-text="cardError" class="card-form-error" role="alert"></p>
-            <div class="editor-actions"><button type="submit" class="primary-button" :disabled="savingCard"><span x-text="savingCard ? 'Saving…' : cardForm.id ? 'Save changes' : libraryDomain === 'football' ? 'Add player' : 'Add card'"></span><i data-lucide="check"></i></button><button x-show="cardForm.id" type="button" class="secondary-button" @click="resetCard()" :disabled="savingCard">Cancel</button></div>
+            <div class="editor-actions"><button type="submit" class="primary-button" :disabled="savingCard"><span x-text="savingCard ? 'Saving…' : cardForm.id ? 'Save changes' : libraryDomain === 'football' ? 'Add player' : 'Add card'"></span><i data-icon="check-lg"></i></button><button x-show="cardForm.id" type="button" class="secondary-button" @click="resetCard()" :disabled="savingCard">Cancel</button></div>
         </form>
         <div class="library-collection"><label x-show="libraryDomain === 'custom'" class="catalog-filter">Collection<select x-model="libraryFilter" aria-label="Filter collection"><option value="">All cards</option><template x-for="catalog in catalogOptions" :key="catalog.name"><option :value="catalog.name" x-text="catalog.name + ' (' + catalog.count + ')'"></option></template></select></label>
             <div x-show="libraryLoading" class="library-grid" role="status" aria-label="Loading your cards"><template x-for="i in 4"><div class="skeleton library-skeleton"></div></template></div>
-            <div x-show="!libraryLoading && !filteredLibrary.length" class="library-empty"><i data-lucide="layers-2"></i><h2 x-text="libraryDomain === 'football' ? 'Build your player pool.' : 'Your deck starts here.'"></h2><p x-text="libraryDomain === 'football' ? 'Add 22 players across the positions above for two complete 4-3-3 teams.' : 'Add 6 character cards for a 3-round game.'"></p></div>
+            <div x-show="!libraryLoading && !filteredLibrary.length" class="library-empty"><i data-icon="layers"></i><h2 x-text="libraryDomain === 'football' ? 'Build your player pool.' : 'Your deck starts here.'"></h2><p x-text="libraryDomain === 'football' ? 'Add 22 players across the positions above for two complete 4-3-3 teams.' : 'Add 6 character cards for a 3-round game.'"></p></div>
             <div x-show="!libraryLoading" class="library-grid"><template x-for="card in filteredLibrary" :key="card.id"><button class="library-card" :class="card.is_icon ? 'icon-player' : ''" @click="editCard(card)" :disabled="savingCard" :aria-label="'Edit ' + card.name"><img :src="card.image_path" :alt="card.name" loading="lazy"><div><h3><small x-show="card.position" x-text="(card.is_icon ? '★ ICON · ' : '') + card.position"></small><small x-show="libraryDomain === 'custom' && card.series" x-text="card.series"></small><span x-text="card.name"></span></h3><strong x-text="card.power"></strong></div><span class="edit-card-hint">Edit</span></button></template></div>
         </div>
     </div>
