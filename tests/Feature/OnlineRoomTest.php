@@ -75,9 +75,9 @@ class OnlineRoomTest extends TestCase
         $room = $this->seat(0)->postJson('/rooms/'.$room['id'].'/pick', ['version' => $old, 'cardId' => $room['game']['cards'][1]['selectionId']])->assertOk()->assertJsonPath('game.phase', 'revealing')->json();
         $this->seat(0)->postJson('/rooms/'.$room['id'].'/pick', ['version' => $old, 'cardId' => 'duplicate'])->assertUnprocessable();
         $this->seat(1)->getJson('/rooms/'.$room['id'])->assertJsonPath('game.players.2.cards.0.id', $room['game']['extraCard']['id']);
-        $this->seat(1)->postJson('/rooms/'.$room['id'].'/next', ['version' => $room['version']])->assertForbidden();
-        $room = $this->seat(0)->postJson('/rooms/'.$room['id'].'/next', ['version' => $room['version']])->assertOk()->assertJsonPath('game.cards', [])->json();
-        $this->seat(1)->getJson('/rooms/'.$room['id'])->assertJsonCount(2, 'game.cards');
+        // Any seated player can advance, so a dropped host cannot stall the draft.
+        $room = $this->seat(1)->postJson('/rooms/'.$room['id'].'/next', ['version' => $room['version']])->assertOk()->assertJsonCount(2, 'game.cards')->json();
+        $this->seat(0)->getJson('/rooms/'.$room['id'])->assertJsonPath('game.cards', []);
         Event::assertDispatched(RoomChanged::class);
     }
 
@@ -131,7 +131,31 @@ class OnlineRoomTest extends TestCase
         $this->seat(1)->postJson('/rooms/'.$room['id'].'/settings', $settings)->assertForbidden();
         $room = $this->seat(0)->postJson('/rooms/'.$room['id'].'/settings', $settings)->assertOk()->assertJsonPath('members.1.ready', false)->json();
         $this->seat(0)->postJson('/rooms/'.$room['id'].'/leave', ['version' => $room['version']])->assertOk()->assertContent('null');
+        $this->seat(0)->getJson('/rooms/'.$room['id'])->assertForbidden();
+        $room = $this->seat(1)->getJson('/rooms/'.$room['id'])->assertOk()->assertJsonPath('viewerIndex', 0)
+            ->assertJsonPath('isHost', true)->assertJsonCount(1, 'members')->json();
+        $this->seat(1)->postJson('/rooms/'.$room['id'].'/leave', ['version' => $room['version']])->assertOk();
         $this->seat(1)->getJson('/rooms/'.$room['id'])->assertStatus(410);
+    }
+
+    public function test_host_leaving_mid_match_hands_over_and_the_empty_seat_picks_at_random(): void
+    {
+        $room = $this->begin($this->lobby());
+        $this->seat(1)->postJson('/rooms/'.$room['id'].'/leave', ['version' => $room['version']])->assertUnprocessable();
+        $this->assertSame(0, $room['game']['activePlayer']);
+        $this->seat(0)->postJson('/rooms/'.$room['id'].'/leave', ['version' => $room['version']])->assertOk()->assertContent('null');
+        $this->seat(0)->getJson('/rooms/'.$room['id'])->assertForbidden();
+        $room = $this->seat(1)->getJson('/rooms/'.$room['id'])->assertOk()->assertJsonPath('status', 'playing')
+            ->assertJsonPath('isHost', true)->assertJsonPath('members.0.left', true)
+            ->assertJsonPath('game.phase', 'revealing')->assertJsonCount(1, 'game.players.0.cards')->json();
+        $room = $this->seat(1)->postJson('/rooms/'.$room['id'].'/next', ['version' => $room['version']])->assertOk()->assertJsonPath('game.phase', 'picking')->json();
+        $room = $this->seat(1)->postJson('/rooms/'.$room['id'].'/pick', ['version' => $room['version'], 'cardId' => $room['game']['cards'][0]['selectionId']])->assertOk()->json();
+        // The departed host's turn resolves immediately instead of waiting for a pick.
+        $room = $this->seat(1)->postJson('/rooms/'.$room['id'].'/next', ['version' => $room['version']])->assertOk()->assertJsonPath('game.phase', 'revealing')->json();
+        $room = $this->seat(1)->postJson('/rooms/'.$room['id'].'/finish', ['version' => $room['version']])->assertOk()->assertJsonPath('status', 'finished')->json();
+        foreach ($room['game']['players'] as $player) {
+            $this->assertCount(3, $player['cards']);
+        }
     }
 
     public function test_four_online_players_finish_with_equal_rosters(): void

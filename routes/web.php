@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminRoomController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\RoomController;
@@ -30,6 +31,10 @@ Route::get('/admin/login', fn () => view('admin.login'))->name('admin.login');
 Route::post('/admin/login', [AdminController::class, 'login'])->middleware('throttle:5,1');
 Route::get('/admin', [GameController::class, 'setup'])->middleware(RequireAdmin::class)->name('admin');
 Route::post('/admin/logout', [AdminController::class, 'logout'])->middleware(RequireAdmin::class);
+Route::middleware(RequireAdmin::class)->prefix('admin/rooms')->controller(AdminRoomController::class)->group(function () {
+    Route::get('/', 'index')->name('admin.rooms');
+    Route::post('/{room}/ban', 'ban')->name('admin.rooms.ban')->middleware('throttle:30,1');
+});
 Route::prefix('rooms')->middleware('throttle:rooms')->controller(RoomController::class)->group(function () {
     Route::post('/', 'create')->block()->middleware('throttle:10,1');
     Route::post('/join', 'join')->block()->middleware('throttle:15,1');

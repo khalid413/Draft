@@ -23,8 +23,8 @@ class RoomView
         }
 
         return ['id' => $room->id, 'code' => $room->code, 'status' => $room->status, 'version' => $room->version,
-            'settings' => $room->settings, 'viewerIndex' => $viewer, 'isHost' => $viewer === 0,
-            'members' => array_map(fn ($member) => ['name' => $member['name'], 'ready' => $member['ready']], $room->members),
+            'settings' => $room->settings, 'viewerIndex' => $viewer, 'host' => $room->host, 'isHost' => $viewer === $room->host,
+            'members' => array_map(fn ($member) => ['name' => $member['name'], 'ready' => $member['ready'], 'left' => $member['left'] ?? false], $room->members),
             'game' => $state, 'playback' => $room->playback, 'serverTimeMs' => (int) round(microtime(true) * 1000)];
     }
 }

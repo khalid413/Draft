@@ -1,10 +1,13 @@
 import Alpine from 'alpinejs';
 import draftDuel from './draftDuel';
 import { reducedMotion } from './animations';
+import { createIcons, Layers2 } from 'lucide';
 
 window.Alpine = Alpine;
 Alpine.data('draftDuel', draftDuel);
 Alpine.start();
+// Server-rendered admin pages have no Alpine component to draw their icons.
+if (document.querySelector('.admin-rooms')) createIcons({ icons: { Layers2 }, attrs: { 'aria-hidden': 'true' } });
 
 if (!reducedMotion()) {
     Promise.all([import('@tsparticles/engine'), import('@tsparticles/slim')]).then(async ([{ tsParticles }, { loadSlim }]) => {

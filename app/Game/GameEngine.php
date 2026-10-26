@@ -137,6 +137,14 @@ final class GameEngine
             throw new DomainException('The pick timer has not expired.');
         }
 
+        return $this->autoPick($state);
+    }
+
+    /** Random pick for an expired timer or a seat whose player has left the room. */
+    public function autoPick(GameState $state): GameState
+    {
+        $this->requirePhase($state, GamePhase::Picking);
+
         return $this->recordPick($state, random_int(0, 1));
     }
 

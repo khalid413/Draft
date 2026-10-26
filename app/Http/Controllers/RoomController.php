@@ -60,7 +60,7 @@ class RoomController extends Controller
         $token = bin2hex(random_bytes(32));
         [$room, $index, $existing] = DB::transaction(function () use ($request, $data, $token) {
             $room = Room::where('code', $data['code'])->lockForUpdate()->firstOrFail();
-            abort_if($room->expires_at->isPast() || $room->status === 'closed', 410, 'This room is closed.');
+            abort_if($room->isClosed(), 410, 'This room is closed.');
             if ($request->session()->has('room_tokens.'.$room->id)) {
                 return [$room, $this->access->index($request, $room), true];
             }
@@ -119,7 +119,7 @@ class RoomController extends Controller
     {
         $room = DB::transaction(function () use ($request, $room) {
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
-            abort_unless($this->access->index($request, $room) === 0, 403);
+            abort_unless($this->access->index($request, $room) === $room->host, 403);
             if ($room->status !== 'lobby') {
                 throw new DomainException('Settings are locked after kickoff.');
             }
@@ -136,7 +136,7 @@ class RoomController extends Controller
         }, 3);
         $this->notify($room);
 
-        return $this->reply($room, 0);
+        return $this->reply($room, $room->host);
     }
 
     public function action(Request $request, Room $room, string $action)
@@ -156,15 +156,9 @@ class RoomController extends Controller
                 $members[$index]['ready'] = $request->boolean('ready');
                 $room->members = $members;
             } elseif ($action === 'leave') {
-                if ($index === 0) {
-                    $room->status = 'closed';
-                } elseif ($room->status === 'lobby') {
-                    $room->members = array_values(array_filter($room->members, fn ($m, $i) => $i !== $index, ARRAY_FILTER_USE_BOTH));
-                } else {
-                    throw new DomainException('Your seat stays reserved during a match. You can return using this browser.');
-                }
+                $this->leave($room, $index);
             } elseif ($action === 'start') {
-                abort_unless($index === 0, 403);
+                abort_unless($index === $room->host, 403);
                 if ($room->status !== 'lobby' || count($room->members) !== $room->settings['capacity'] || in_array(false, array_column($room->members, 'ready'), true)) {
                     throw new DomainException('Fill the room and wait for everyone to be ready.');
                 }
@@ -175,7 +169,7 @@ class RoomController extends Controller
                 $room->game_uuid = $game->uuid;
                 $room->status = 'playing';
             } elseif ($action === 'replay') {
-                abort_unless($index === 0, 403);
+                abort_unless($index === $room->host, 403);
                 if ($room->status !== 'finished') {
                     throw new DomainException('Finish the draft first.');
                 }
@@ -200,9 +194,11 @@ class RoomController extends Controller
                     $this->engine->pick($state, $index, $request->string('cardId')->toString());
                     $this->engine->revealRound($state);
                 } elseif ($action === 'next' || $action === 'finish') {
-                    abort_unless($index === 0, 403);
+                    // Any seated player may advance: the deck and match seed are fixed at kickoff,
+                    // so a dropped host can no longer stall the room.
                     if ($action === 'next') {
                         $this->engine->drawRound($this->engine->nextRound($state));
+                        $this->pickForDepartedSeat($room, $state);
                     } else {
                         $this->engine->finish($state);
                         $room->status = 'finished';
@@ -230,6 +226,52 @@ class RoomController extends Controller
         }
 
         return $this->reply($room, $index);
+    }
+
+    /** Lobby seats are released; during a match only the host may leave and hosting passes on. */
+    private function leave(Room $room, int $index): void
+    {
+        if ($room->status === 'lobby') {
+            $members = $room->members;
+            unset($members[$index]);
+            $room->members = array_values($members);
+            if (! $room->members) {
+                $room->status = 'closed';
+            } elseif ($index < $room->host) {
+                $room->host--;
+            } elseif ($index === $room->host) {
+                $room->host = $index % count($room->members);
+            }
+
+            return;
+        }
+        if ($index !== $room->host) {
+            throw new DomainException('Your seat stays reserved during a match. You can return using this browser.');
+        }
+        $members = $room->members;
+        $members[$index]['left'] = true;
+        $room->members = $members;
+        $seats = $room->activeSeats();
+        if (! $seats) {
+            $room->status = 'closed';
+
+            return;
+        }
+        $room->host = collect($seats)->first(fn ($seat) => $seat > $index) ?? $seats[0];
+        if ($room->status === 'playing') {
+            $game = Game::whereKey($room->game_uuid)->lockForUpdate()->firstOrFail();
+            $state = GameState::fromArray($game->state);
+            $this->pickForDepartedSeat($room, $state);
+            $game->update(['state' => $state->jsonSerialize(), 'status' => $state->phase->value, 'version' => $game->version + 1]);
+        }
+    }
+
+    /** A departed seat never blocks the draft: its pick is made at random and revealed at once. */
+    private function pickForDepartedSeat(Room $room, GameState $state): void
+    {
+        if ($state->phase === GamePhase::Picking && ($room->members[$state->startingPlayerIndex]['left'] ?? false)) {
+            $this->engine->revealRound($this->engine->autoPick($state));
+        }
     }
 
     public function broadcastAuth(Request $request)
