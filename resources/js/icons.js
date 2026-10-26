@@ -1,5 +1,12 @@
 // Bootstrap Icons, inlined as SVG so existing `.x svg` sizing rules keep working.
 // Usage in markup: <i data-icon="copy"></i>. Add an icon here before using it.
+import arrowDown from 'bootstrap-icons/icons/arrow-down.svg?raw';
+import arrowUp from 'bootstrap-icons/icons/arrow-up.svg?raw';
+import cloudArrowUp from 'bootstrap-icons/icons/cloud-arrow-up.svg?raw';
+import doorOpen from 'bootstrap-icons/icons/door-open.svg?raw';
+import inbox from 'bootstrap-icons/icons/inbox.svg?raw';
+import musicNoteList from 'bootstrap-icons/icons/music-note-list.svg?raw';
+import trash3 from 'bootstrap-icons/icons/trash3.svg?raw';
 import arrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwise.svg?raw';
 import arrowLeft from 'bootstrap-icons/icons/arrow-left.svg?raw';
 import arrowLeftRight from 'bootstrap-icons/icons/arrow-left-right.svg?raw';
@@ -31,6 +38,8 @@ const icons = {
     'lightning-charge': lightningCharge, lock, 'music-note-beamed': musicNoteBeamed, 'pause-fill': pauseFill, phone,
     'play-fill': playFill, share, 'skip-backward': skipBackward, 'skip-forward': skipForward, stars, trophy,
     'volume-mute': volumeMute, 'volume-up': volumeUp, 'x-lg': xLg,
+    'arrow-down': arrowDown, 'arrow-up': arrowUp, 'cloud-arrow-up': cloudArrowUp, 'door-open': doorOpen, inbox,
+    'music-note-list': musicNoteList, trash3,
 };
 
 const template = document.createElement('template');

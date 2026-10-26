@@ -34,6 +34,40 @@ class AdminRoomsTest extends TestCase
         $this->assertSame('lobby', Room::first()->status);
     }
 
+    public function test_admin_filters_rooms_by_status(): void
+    {
+        $make = fn (string $code, string $status, array $extra = []) => Room::create([...['id' => (string) \Illuminate\Support\Str::uuid(), 'code' => $code, 'status' => $status,
+            'settings' => ['domain' => 'custom', 'rounds' => 3, 'capacity' => 2, 'timer' => false],
+            'members' => [['name' => 'Owner '.$code, 'ready' => false, 'token_hash' => hash('sha256', $code)]], 'expires_at' => now()->addDay()], ...$extra]);
+        $make('LOBBY001', 'lobby');
+        $make('FINISH01', 'finished');
+        $make('BANNED01', 'banned');
+        $make('EXPIRED1', 'lobby', ['expires_at' => now()->subMinute()]);
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        // Every room is rendered once with its bucket; filtering happens in the browser.
+        $page = $this->get('/admin/rooms')->assertOk()->assertSee(['LOBBY001', 'FINISH01', 'BANNED01', 'EXPIRED1']);
+        $bucketOf = function (string $html, string $code): string {
+            preg_match('/data-bucket="(\w+)"(?:(?!<\/article>).)*'.$code.'/s', $html, $match);
+
+            return $match[1] ?? 'missing';
+        };
+        $html = $page->getContent();
+        $this->assertSame('lobby', $bucketOf($html, 'LOBBY001'));
+        $this->assertSame('finished', $bucketOf($html, 'FINISH01'));
+        $this->assertSame('closed', $bucketOf($html, 'BANNED01'));
+        $this->assertSame('closed', $bucketOf($html, 'EXPIRED1'));
+        $page->assertSee('<b>4</b>', false)->assertSee('<b>2</b>', false);
+
+        // A bookmarked filter starts on that filter and hides the other rooms before scripts run.
+        $finished = $this->get('/admin/rooms?status=finished')->assertOk()->getContent();
+        $this->assertStringContainsString("filter: 'finished'", $finished);
+        $this->assertMatchesRegularExpression('/data-bucket="lobby"[^>]*style="display:none"/', $finished);
+        $this->assertDoesNotMatchRegularExpression('/data-bucket="finished"[^>]*style="display:none"/', $finished);
+        $this->get('/admin/rooms?status=playing')->assertOk()->assertSee('No playing rooms right now.');
+        $this->assertStringContainsString("filter: 'all'", $this->get('/admin/rooms?status=nonsense')->getContent());
+    }
+
     public function test_admin_sees_rooms_with_players_and_ban_closes_them(): void
     {
         [$room, $hostTokens] = $this->room();

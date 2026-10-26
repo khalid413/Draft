@@ -39,6 +39,21 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     get catalogOptions() { return [...new Set([...this.catalogs.map(item => item.name), 'DC Heroes'])].sort().map(name => ({ name, count: Number(this.catalogs.find(item => item.name === name)?.count || 0) })); },
     get selectedCardCount() { return this.settings.catalog ? Number(this.catalogs.find(item => item.name === this.settings.catalog)?.count || 0) : this.cardCount; },
     get filteredLibrary() { return this.libraryDomain === 'custom' && this.libraryFilter ? this.library.filter(card => card.series === this.libraryFilter) : this.library; },
+    libraryPage: 1, libraryPageSize: 50,
+    get libraryPageCount() { return Math.max(1, Math.ceil(this.filteredLibrary.length / this.libraryPageSize)); },
+    get pagedLibrary() { const page = Math.min(this.libraryPage, this.libraryPageCount); return this.filteredLibrary.slice((page - 1) * this.libraryPageSize, page * this.libraryPageSize); },
+    get libraryRange() { const total = this.filteredLibrary.length, page = Math.min(this.libraryPage, this.libraryPageCount); return total ? `${(page - 1) * this.libraryPageSize + 1}–${Math.min(page * this.libraryPageSize, total)} of ${total}` : ''; },
+    // Page numbers with gaps once there are many pages: 1 … 4 5 6 … 12
+    get libraryPages() {
+        const count = this.libraryPageCount, current = Math.min(this.libraryPage, count);
+        if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1);
+        const pages = [1, ...[current - 1, current, current + 1].filter(page => page > 1 && page < count), count];
+        return pages.flatMap((page, i) => i && page - pages[i - 1] > 1 ? ['…', page] : [page]);
+    },
+    goToLibraryPage(page) {
+        this.libraryPage = Math.min(Math.max(1, page), this.libraryPageCount);
+        document.querySelector('.library-collection')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    },
     library: [], cardCount: initialCardCount, libraryLoading: false, savingCard: false,
     libraryDomain: 'custom', pendingLibraryDomain: 'custom', footballInventory: initialFootballInventory,
     positions: ['GK', 'LB', 'CB', 'RB', 'CM', 'LW', 'ST', 'RW'],
@@ -55,9 +70,10 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
         try { this.muted = localStorage.getItem('draft-duel-muted') !== 'false'; } catch {}
         muteSounds(this.muted);
         this.loadSongs();
+        this.$watch('libraryFilter', () => { this.libraryPage = 1; });
         const invitation = new URLSearchParams(location.search).get('join');
         let savedRoom = null; try { savedRoom = sessionStorage.getItem('draft-room-id'); } catch {}
-        if (this.$el.dataset.admin === 'true') { this.loading = false; await this.openLibrary('custom'); }
+        if (this.$root.dataset.admin === 'true') { this.loading = false; await this.openLibrary('custom'); }
         else if (invitation) { this.joinCode = invitation; this.screen = 'join'; }
         else if (savedRoom) {
             try { await this.connectRoom(await gameClient.room(savedRoom)); }
@@ -94,13 +110,13 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     },
     lineupCard(player, key) { return player?.cards.find(card => card.slot === key); },
     async openLibrary(domain = null) {
-        if (this.$el.dataset.admin !== 'true') return;
+        if (this.$root.dataset.admin !== 'true') return;
         if (this.busy || this.savingCard || this.libraryLoading) return;
         domain ??= (this.game?.domainKey || this.settings.domain) === 'football' ? 'football' : 'custom';
         this.pendingLibraryDomain = domain;
         if (this.game && this.game.phase !== 'finished') { this.openModal('library'); return; }
         if (domain !== this.libraryDomain && (this.cardFile || this.cardForm.name) && !window.confirm('Discard the unsaved card changes?')) return;
-        if (domain !== this.libraryDomain) { this.libraryDomain = domain; this.resetCard(); }
+        if (domain !== this.libraryDomain) { this.libraryDomain = domain; this.libraryPage = 1; this.resetCard(); }
         this.screen = 'library'; this.libraryLoading = true; this.cardError = ''; this.error = '';
         this.library = [];
         try { this.library = await gameClient.cards(domain); this.updateLibraryCounts(); }
@@ -154,7 +170,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     leaveLibrary(next = 'home') {
         if (this.savingCard) return;
         if ((this.cardFile || this.cardForm.name) && !window.confirm('Discard the unsaved card changes?')) return;
-        this.resetCard(); if (this.$el.dataset.admin === 'true') { location.assign('/'); return; } if (next === 'setup') this.selectDraft(this.libraryDomain); this.screen = next;
+        this.resetCard(); if (this.$root.dataset.admin === 'true') { location.assign('/'); return; } if (next === 'setup') this.selectDraft(this.libraryDomain); this.screen = next;
     },
     async refresh(initial = false) {
         if (this.online) return this.refreshRoom();

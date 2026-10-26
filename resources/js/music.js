@@ -24,7 +24,10 @@ export const musicPlayer = {
     async loadSongs() {
         const saved = readSaved();
         if (typeof saved.volume === 'number') this.musicVolume = Math.min(1, Math.max(0, saved.volume));
-        try { this.songs = await gameClient.songs(); } catch { this.songs = []; }
+        try {
+            const songs = await gameClient.songs();
+            this.songs = Array.isArray(songs) ? songs : []; // An empty or odd response must not break the page.
+        } catch { this.songs = []; }
         const index = this.songs.findIndex(song => song.id === saved.id);
         this.musicIndex = index >= 0 ? index : 0;
         this.songsLoaded = true;
