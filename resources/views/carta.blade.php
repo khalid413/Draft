@@ -1,9 +1,9 @@
 @extends('layouts.app')
-@section('title', 'Carta — Moroccan card game')
+@section('title', 'Moroccan Carta · Glisa')
 @section('content')
 <div class="carta-shell" x-data="carta">
     <header class="carta-header">
-        <a href="/" class="carta-brand" aria-label="Back to Draft Duel"><img src="/cards/back.webp" alt="" width="28" height="42"><span>CARTA<small>كارطا مغربية</small></span></a>
+        <a href="/" class="carta-brand" aria-label="Back to all Glisa games"><img src="/cards/back.webp" alt="" width="28" height="42"><span>CARTA<small>كارطا مغربية</small></span></a>
         <div class="carta-header-right">
             <button x-show="room" x-cloak class="carta-leave" @click="leave()" :disabled="busy"><i data-icon="box-arrow-right"></i><span>Leave</span></button>
         </div>

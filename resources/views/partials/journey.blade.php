@@ -1,4 +1,5 @@
 <section x-cloak x-show="!loading && screen === 'home'" class="welcome-screen">
+    <a href="/" class="back-button library-back"><i data-icon="arrow-left"></i> All games</a>
     <div class="welcome-orbit" aria-hidden="true"><span>?</span><span>✦</span></div>
     <span class="eyebrow">ONE PICK CHANGES EVERYTHING</span><h1>DRAFT<span>DUEL</span></h1><p>Your instinct. Your team. Your moment.</p>
     <button class="primary-button" @click="screen = 'modes'">Enter the arena <i data-icon="arrow-right"></i></button>
@@ -6,10 +7,10 @@
 </section>
 
 <section x-cloak x-show="!loading && screen === 'modes'" class="journey-screen">
-    <span class="eyebrow">PICK YOUR GAME</span><h1>Let's play.</h1><p>Good friends. Tough choices.</p>
+    <a href="/" class="back-button library-back"><i data-icon="arrow-left"></i> All games</a>
+    <span class="eyebrow">DRAFT DUEL</span><h1>Ready to draft?</h1><p>Good friends. Tough choices.</p>
     <button class="mode-feature" @click="screen = 'draft-type'"><span class="mode-art"><i data-icon="layers"></i><b>?</b></span><span><strong>Draft</strong><small>Keep one. Give one. Own the result.</small></span><i data-icon="arrow-up-right"></i></button>
     <button class="secondary-button" @click="screen = 'join'">Join a room <i data-icon="arrow-right"></i></button>
-    <a href="/carta" class="secondary-button carta-entry"><img src="/cards/back.webp" alt="" width="18" height="27"> Moroccan Carta <i data-icon="arrow-up-right"></i></a>
     <button class="admin-corner" @click="adminTap()" aria-label="Administrator access: activate three times"><span>· · ·</span></button>
 </section>
 

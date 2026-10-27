@@ -49,6 +49,6 @@ class CharacterCatalogTest extends TestCase
         $this->postJson('/cards/'.$card['id'], ['name' => 'Batman', 'power' => 650])->assertOk()->assertJsonPath('series', 'DC Heroes');
         $this->postJson('/cards/'.$card['id'], ['name' => 'Batman', 'power' => 650, 'series' => 'Gotham'])->assertOk()->assertJsonPath('series', 'Gotham');
         $this->postJson('/cards/'.$card['id'], ['name' => 'Batman', 'power' => 650, 'series' => str_repeat('a', 61)])->assertUnprocessable();
-        $this->get('/')->assertOk()->assertSee('Gotham');
+        $this->get('/draft')->assertOk()->assertSee('Gotham');
     }
 }

@@ -1,4 +1,4 @@
-# Deploying Draft Duel to a VPS
+# Deploying Glisa to a VPS
 
 One Ubuntu 24.04 server runs everything: Nginx serves the site over HTTPS, PHP-FPM runs Laravel, and Supervisor keeps the Reverb WebSocket server alive behind Nginx. The SQLite database and uploaded cards/songs live on the server's disk.
 

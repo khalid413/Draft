@@ -47,6 +47,7 @@ export const gameClient = {
         return () => { clearInterval(timer); echo?.disconnect(); };
     },
     songs: () => request('/music'),
+    findTable: code => request('/find-table', { code }),
     carta: {
         create: (name, capacity) => request('/carta/rooms', { name, capacity }),
         join: (code, name) => request('/carta/rooms/join', { code, name }),

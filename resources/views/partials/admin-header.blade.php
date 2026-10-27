@@ -7,7 +7,7 @@
     ];
 @endphp
 <header class="site-header admin-header">
-    <a href="/" class="wordmark" aria-label="Draft Duel player site"><span class="brand-mark"><i data-icon="layers"></i></span><span class="wordmark-text">DRAFT<span>DUEL</span></span><span class="admin-badge">Admin</span></a>
+    <a href="/" class="wordmark" aria-label="Glisa player site"><span class="brand-mark glisa-admin-mark" aria-hidden="true">ج</span><span class="wordmark-text">GLISA</span><span class="admin-badge">Admin</span></a>
     <nav class="admin-tabs" aria-label="Admin sections">
         @foreach($sections as $key => $section)
             <a href="{{ $section['href'] }}" @class(['admin-tab', 'active' => $active === $key]) @if($active === $key) aria-current="page" @endif><i data-icon="{{ $section['icon'] }}"></i><span>{{ $section['label'] }}</span></a>

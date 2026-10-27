@@ -25,7 +25,7 @@ class MusicTest extends TestCase
         $this->get('/admin/music')->assertRedirect('/admin/login');
         $this->postJson('/admin/music', ['title' => 'Nope'])->assertForbidden();
         $this->actingAs(User::factory()->create())->postJson('/admin/music', ['title' => 'Nope'])->assertForbidden();
-        $this->get('/')->assertOk()->assertSee('Background music')->assertSee('Turn sound effects')
+        $this->get('/draft')->assertOk()->assertSee('Background music')->assertSee('Turn sound effects')
             ->assertDontSee('How to play')->assertDontSee('Draft Duel home');
     }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup of Draft Duel on a fresh Ubuntu 24.04 VPS. Run as root:
+# One-time setup of Glisa (Draft Duel, Moroccan Carta) on a fresh Ubuntu 24.04 VPS. Run as root:
 #   DOMAIN=draft.example.com EMAIL=you@example.com bash provision.sh
 # The domain's DNS A record must already point at this server (Let's Encrypt checks it).
 set -euo pipefail

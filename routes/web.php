@@ -5,12 +5,15 @@ use App\Http\Controllers\AdminRoomController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\CartaController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SongController;
 use App\Http\Middleware\RequireAdmin;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [GameController::class, 'setup'])->name('home');
+Route::get('/', [LibraryController::class, 'index'])->name('home');
+Route::post('/find-table', [LibraryController::class, 'find'])->middleware('throttle:20,1');
+Route::get('/draft', [GameController::class, 'setup'])->name('draft');
 Route::get('/setup', [GameController::class, 'setup'])->name('setup');
 Route::prefix('game')->controller(GameController::class)->group(function () {
     Route::get('/state', 'state')->block();

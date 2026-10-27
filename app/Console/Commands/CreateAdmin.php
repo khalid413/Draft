@@ -10,7 +10,7 @@ class CreateAdmin extends Command
 {
     protected $signature = 'draft:admin';
 
-    protected $description = 'Create or update the Draft Duel administrator securely';
+    protected $description = 'Create or update the Glisa administrator securely';
 
     public function handle(): int
     {

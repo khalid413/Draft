@@ -20,7 +20,7 @@ class AdminAccessTest extends TestCase
             $this->postJson($path.'/'.$card->id, [])->assertForbidden();
         }
         $this->get('/admin')->assertRedirect('/admin/login');
-        $this->get('/')->assertOk()->assertDontSee('Upload card picture')->assertDontSee('Create cards');
+        $this->get('/draft')->assertOk()->assertDontSee('Upload card picture')->assertDontSee('Create cards');
         $this->actingAs(User::factory()->create())->getJson('/cards')->assertForbidden();
     }
 

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'Admin · Glisa')
 @section('content')
 <div class="app-shell admin-rooms" x-data="{ filter: @js($filter), counts: @js($filters->map(fn ($item) => $item['count'])), labels: @js($filters->map(fn ($item) => $item['label'])),
     show(key) {

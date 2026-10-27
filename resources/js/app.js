@@ -1,15 +1,26 @@
 import Alpine from 'alpinejs';
 import draftDuel from './draftDuel';
 import carta from './carta';
+import { gameClient } from './gameClient';
 import { reducedMotion } from './animations';
 import { renderIcons } from './icons';
 
 window.Alpine = Alpine;
 Alpine.data('draftDuel', draftDuel);
 Alpine.data('carta', carta);
+// Library join box: a table code opens whichever game it belongs to.
+Alpine.data('library', () => ({
+    code: '', error: '', busy: false,
+    async join() {
+        if (this.busy) return;
+        this.busy = true; this.error = '';
+        try { location.assign((await gameClient.findTable(this.code.trim())).url); }
+        catch (error) { this.error = error.message; this.busy = false; }
+    },
+}));
 Alpine.start();
-// Server-rendered admin pages have no Alpine component to draw their icons.
-if (document.querySelector('.admin-rooms')) renderIcons();
+// Server-rendered pages (admin screens, the library) have no component that draws their icons.
+if (document.querySelector('.admin-rooms, .glisa-shell')) renderIcons();
 
 if (!reducedMotion()) {
     Promise.all([import('@tsparticles/engine'), import('@tsparticles/slim')]).then(async ([{ tsParticles }, { loadSlim }]) => {

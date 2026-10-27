@@ -98,7 +98,7 @@ export const onlineRoom = {
     rematch() { return this.roomAction('rematch'); },
     // The code is what friends type on the Join screen; the link is an optional shortcut.
     copyCode() { return this.copyText(this.room.code, 'copiedCode', 'Copy this room code: ' + this.room.code); },
-    copyInvite() { const link = `${location.origin}/?join=${this.room.code}`; return this.copyText(link, 'copiedInvite', 'Copy this invite link: ' + link); },
+    copyInvite() { const link = `${location.origin}/draft?join=${this.room.code}`; return this.copyText(link, 'copiedInvite', 'Copy this invite link: ' + link); },
     async copyText(text, flag, fallback) {
         try {
             await navigator.clipboard.writeText(text);

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'Admin · Glisa')
 @section('content')
 <div class="app-shell" data-admin="true" x-data="draftDuel({{ $customCardCount }}, @js($footballInventory), @js($catalogs))">
     @include('partials.admin-header', ['active' => 'cards'])

@@ -1,4 +1,13 @@
-# Draft Duel
+# Glisa · جلسة
+
+Glisa is a library of games for game nights with friends. The front page (`/`) lists the games and has one box that takes any table code to the right game.
+
+| Game | Path |
+| --- | --- |
+| Draft Duel | `/draft` (old `/?join=CODE` invites redirect there) |
+| Moroccan Carta | `/carta` |
+
+## Draft Duel (`/draft`)
 
 Private online rooms and the protected admin area are implemented. See [ONLINE.md](ONLINE.md) for admin account creation, Reverb startup, room behavior, and deployment requirements.
 

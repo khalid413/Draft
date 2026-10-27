@@ -1,5 +1,6 @@
 @import 'notyf/notyf.min.css';
 @import './carta.css';
+@import './glisa.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -386,4 +387,4 @@ footer { min-height:100px; display:flex; align-items:center; justify-content:spa
 .pager-page { min-width:42px; height:42px; padding:0 10px; border-radius:10px; border:1px solid #ffffff12; color:var(--muted); font-size:13px; font-weight:600; transition:background .2s,color .2s; }
 .pager-page:hover:not(:disabled) { color:var(--text); background:#ffffff08; }.pager-page.current { color:white; background:var(--primary); border-color:var(--primary); }.pager-page:disabled:not(.current) { border-color:transparent; cursor:default; }
 @media(max-width:600px) { .library-pager { justify-content:center; }.pager-range { width:100%; text-align:center; } }
-.carta-entry { margin-left:10px; }.carta-entry img { width:18px; height:27px; border-radius:3px; object-fit:cover; transform:rotate(-8deg); }
+.glisa-admin-mark { font:700 18px Inter,sans-serif; color:white; }

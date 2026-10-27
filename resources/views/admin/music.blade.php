@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'Admin · Glisa')
 @section('content')
 <div class="app-shell admin-rooms admin-music" x-data="{ fileName: '', playing: null, current: null,
     preview(id, src) {

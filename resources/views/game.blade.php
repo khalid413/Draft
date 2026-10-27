@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'Draft Duel · Glisa')
 @section('content')
 <div x-data="draftDuel({{ $customCardCount }}, @js($footballInventory), @js($catalogs))" @keydown.window="keyboard($event)" class="app-shell" data-admin="{{ request()->routeIs('admin') ? 'true' : 'false' }}">
     <header class="site-header player-header">

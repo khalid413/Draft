@@ -1,0 +1,70 @@
+/* Glisa — the game library. Zellige backdrop and palette come from the shared .glisa-shell rule in carta.css. */
+.glisa-shell { display:flex; flex-direction:column; }
+.glisa-shell [x-cloak] { display:none !important; }
+.glisa-shell :focus-visible { outline:3px solid var(--c-gold); outline-offset:3px; }
+
+.glisa-header { display:flex; align-items:center; justify-content:space-between; padding:16px clamp(16px,4vw,48px); border-bottom:1px solid var(--c-line); background:rgba(6,14,24,.55); backdrop-filter:blur(6px); }
+.glisa-brand { display:flex; align-items:center; gap:12px; color:var(--c-cream); text-decoration:none; }
+.glisa-mark { display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:linear-gradient(145deg,#13896a,#0f5a43); border:2px solid var(--c-gold); color:var(--c-gold); font-size:22px; font-weight:700; transform:rotate(-6deg); box-shadow:0 6px 16px #0008; }
+.glisa-brand > span:last-child { display:grid; font:700 22px 'Space Grotesk',sans-serif; letter-spacing:4px; line-height:1.1; }
+.glisa-brand small { font:500 12px Inter,sans-serif; letter-spacing:0; color:var(--c-gold); }
+
+.glisa-main { flex:1; width:100%; max-width:1240px; margin:0 auto; padding:clamp(28px,5vw,64px) clamp(16px,4vw,48px) 48px; display:grid; grid-template-columns:minmax(0,1fr); gap:clamp(32px,5vw,56px); }
+.glisa-eyebrow { font:600 11px 'JetBrains Mono',monospace; letter-spacing:2.5px; color:var(--c-gold); }
+.glisa-hero { display:grid; gap:16px; max-width:720px; }
+.glisa-hero h1 { font:700 clamp(38px,6vw,72px) 'Space Grotesk',sans-serif; line-height:1.02; letter-spacing:-1.5px; }
+.glisa-hero h1 span { display:block; color:var(--c-gold); }
+.glisa-hero p { color:#e5ddcc; font-size:17px; line-height:1.7; max-width:600px; }
+
+.glisa-section-title { font:600 13px 'JetBrains Mono',monospace; letter-spacing:2.5px; text-transform:uppercase; color:#d8cfbd; margin-bottom:16px; }
+.glisa-games { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
+.glisa-game { position:relative; display:grid; grid-template-rows:auto 1fr; overflow:hidden; border-radius:22px; background:var(--c-panel); border:1px solid #f6efe21f; color:var(--c-cream); text-decoration:none; box-shadow:0 20px 50px #0009; transition:transform .25s,border-color .25s,box-shadow .25s; }
+a.glisa-game:hover,a.glisa-game:focus-visible { transform:translateY(-6px); border-color:var(--c-gold); box-shadow:0 28px 60px #000b, 0 0 0 3px #e2b13c33; }
+.glisa-game-art { position:relative; height:200px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.glisa-game-body { display:grid; align-content:start; gap:12px; padding:22px 24px 24px; }
+.glisa-game h3 { font:700 24px 'Space Grotesk',sans-serif; display:flex; align-items:baseline; gap:10px; }
+.glisa-game h3 small { font:500 15px Inter,sans-serif; color:var(--c-gold); }
+.glisa-game p { color:#d8cfbd; line-height:1.6; font-size:14px; }
+.glisa-tags { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
+.glisa-tags li { display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:30px; font-size:12px; color:#e5ddcc; background:#ffffff0d; border:1px solid #f6efe21a; }
+.glisa-tags svg { width:14px; height:14px; color:var(--c-gold); }
+.glisa-play { display:inline-flex; align-items:center; gap:10px; justify-self:start; margin-top:6px; padding:12px 20px; border-radius:12px; font-weight:700; font-size:14px; background:linear-gradient(180deg,#e9bf55,#c99520); color:#2a1a02; }
+.glisa-play svg { width:16px; height:16px; transition:transform .2s; }
+a.glisa-game:hover .glisa-play svg { transform:translateX(4px); }
+
+/* Draft Duel art: a face-down mystery card and a revealed one, in the game's own violet and teal. */
+.glisa-game.draft .glisa-game-art { background:radial-gradient(ellipse at 50% 120%,#7c5cff55,transparent 60%),linear-gradient(160deg,#141a2b,#0b0f1a); }
+.draft-mystery,.draft-reveal { position:absolute; display:grid; place-items:center; width:96px; height:136px; border-radius:14px; font:700 44px 'Space Grotesk',sans-serif; box-shadow:0 18px 30px #000a; }
+.draft-mystery { left:calc(50% - 98px); transform:rotate(-10deg); background:linear-gradient(160deg,#2b2160,#1a1440); border:2px solid #7c5cff; color:#b5a5ff; }
+.draft-reveal { left:calc(50% - 8px); transform:rotate(8deg); background:linear-gradient(160deg,#0f3b39,#0a2423); border:2px solid #00e5c3; color:#00e5c3; }
+/* Carta art: three real cards fanned on felt. */
+.glisa-game.carta .glisa-game-art { background:radial-gradient(ellipse at 50% 40%,#1f8a5c,#0b4429 75%); }
+.glisa-game.carta .glisa-game-art img { position:absolute; width:86px; border-radius:8px; box-shadow:0 14px 26px #000a; }
+.glisa-game.carta .glisa-game-art img:nth-child(1) { left:calc(50% - 112px); transform:rotate(-14deg); }
+.glisa-game.carta .glisa-game-art img:nth-child(2) { left:calc(50% - 43px); top:22px; z-index:1; }
+.glisa-game.carta .glisa-game-art img:nth-child(3) { left:calc(50% + 26px); transform:rotate(12deg); }
+.glisa-game.soon { grid-template-rows:none; align-content:center; place-content:center; justify-items:center; gap:10px; min-height:260px; padding:24px; text-align:center; background:rgba(8,14,22,.55); border:1.5px dashed #f6efe233; box-shadow:none; }
+.glisa-soon-mark { display:grid; place-items:center; width:56px; height:56px; border-radius:50%; border:1.5px dashed var(--c-gold); color:var(--c-gold); font-size:28px; }
+.glisa-game.soon h3 { font-size:19px; }
+
+.glisa-join { display:grid; grid-template-columns:1fr auto; align-items:center; gap:14px 28px; padding:24px 28px; border-radius:20px; background:var(--c-panel); border:1.5px dashed var(--c-gold); }
+.glisa-join h2 { font:700 20px 'Space Grotesk',sans-serif; margin-bottom:4px; }
+.glisa-join p { color:#d8cfbd; font-size:14px; }
+.glisa-join-form { display:flex; gap:10px; }
+.glisa-join-form input { width:220px; min-height:50px; padding:0 16px; border-radius:12px; background:#06101cdd; border:1px solid #f6efe22b; color:var(--c-cream); font:600 16px 'JetBrains Mono',monospace; letter-spacing:4px; text-transform:uppercase; }
+.glisa-join-form input::placeholder { letter-spacing:1.5px; font-size:13px; color:#8f8a80; }
+.glisa-join-form button { display:inline-flex; align-items:center; gap:8px; min-height:50px; padding:0 22px; border-radius:12px; font-weight:700; background:linear-gradient(180deg,#2fbf86,#13896a); color:#04261a; }
+.glisa-join-form button svg { width:16px; height:16px; }
+.glisa-join-form button:disabled { opacity:.6; }
+.glisa-join-error { grid-column:1 / -1; color:#ff9b8f; font-size:14px; }
+.glisa-footer { padding:22px; text-align:center; color:#a9a293; font-size:13px; border-top:1px solid #f6efe214; }
+
+@media (max-width:700px) {
+    .glisa-join { grid-template-columns:minmax(0,1fr); padding:20px; }
+    .glisa-join-form { width:100%; min-width:0; }
+    .glisa-join-form input { flex:1; width:auto; min-width:0; }
+    .glisa-game-art { height:170px; }
+}
+@media (prefers-reduced-motion:reduce) {
+    .glisa-shell * { transition:none !important; }
+}

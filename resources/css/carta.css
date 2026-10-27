@@ -1,5 +1,5 @@
-/* Moroccan Carta — zellige backdrop, felt table and real card art. */
-.carta-shell {
+/* Moroccan Carta — zellige backdrop (shared with the Glisa library), felt table and real card art. */
+.carta-shell,.glisa-shell {
     --c-emerald:#13896a; --c-green:#0f6b4f; --c-cobalt:#123a63; --c-red:#c0392b; --c-gold:#e2b13c; --c-cream:#f6efe2;
     --c-ink:#0b1420; --c-panel:rgba(10,20,32,.88); --c-line:rgba(226,177,60,.35);
     --suit-coins:#e2b13c; --suit-swords:#5b93d3; --suit-cups:#e0574a; --suit-clubs:#37b07a;
