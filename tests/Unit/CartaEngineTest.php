@@ -143,10 +143,29 @@ class CartaEngineTest extends TestCase
         $engine->play($state, 1, 'swords_12');
         $this->assertContains('swords_7', $engine->legalCards($state, 0));
 
-        $pending = $this->table([['coins_2', 'cups_4'], ['clubs_7', 'cups_5']], 'coins_5');
+        $pending = $this->table([['coins_2', 'cups_4'], ['clubs_7', 'swords_2']], 'coins_5');
         $engine->play($pending, 0, 'coins_2');
-        $this->assertSame([], $engine->legalCards($pending, 1));
+        $this->assertSame(['swords_2'], $engine->legalCards($pending, 1));
         $this->rejects(fn () => $engine->play($pending, 1, 'clubs_7', 'cups'), 'Answer with a 2');
+    }
+
+    public function test_a_penalty_with_no_answer_card_applies_at_once(): void
+    {
+        $engine = $this->engine();
+        // Seat 1 holds no 2: the +2 is drawn for them and the turn comes straight back.
+        $state = $this->table([['coins_2', 'cups_4'], ['clubs_7', 'cups_5']], 'coins_5');
+        $engine->play($state, 0, 'coins_2');
+        $this->assertCount(4, $state->players[1]['hand']);
+        $this->assertSame([CartaState::NONE, 0, 0], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
+        $this->assertSame('accept_draw', end($state->events)['type']);
+
+        // Seat 1 holds no 1: their turn is skipped without a click.
+        $state = $this->table([['coins_1', 'cups_4'], ['clubs_7', 'cups_5'], ['coins_6', 'cups_6']], 'coins_5');
+        $engine->play($state, 0, 'coins_1');
+        $this->assertCount(2, $state->players[1]['hand'], 'A skip never draws cards.');
+        $this->assertSame([CartaState::NONE, 2], [$state->pendingEffect, $state->currentSeat]);
+        $this->assertSame('accept_skip', end($state->events)['type']);
+        $this->assertConserved($state);
     }
 
     public function test_drawing_is_only_allowed_without_a_playable_card_and_a_playable_draw_may_be_played_or_passed(): void
@@ -179,8 +198,7 @@ class CartaEngineTest extends TestCase
         $engine = $this->engine();
         $state = $this->table([['coins_2', 'cups_4'], ['swords_2', 'cups_5'], ['clubs_3', 'cups_6']], 'coins_5', draw: ['clubs_10']);
         $engine->play($state, 0, 'coins_2');
-        $engine->play($state, 1, 'swords_2');
-        $engine->accept($state, 2);
+        $engine->play($state, 1, 'swords_2');    // Seat 2 holds no 2, so the +4 is drawn for them.
         $this->assertCount(6, $state->players[2]['hand']);
         $this->assertSame('swords_2', $state->topCard()->id(), 'The top card stays face-up after a reshuffle.');
         $this->assertConserved($state);

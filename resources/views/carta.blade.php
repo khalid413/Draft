@@ -24,7 +24,7 @@
             <div class="carta-forms">
                 <form class="carta-panel" @submit.prevent="createRoom()">
                     <h2>{{ __('Open a table') }}</h2>
-                    <label>{{ __('Your name') }}<input x-model="form.name" required minlength="2" maxlength="20" autocomplete="nickname" placeholder="{{ __('e.g. Yassine') }}"></label>
+                    <label>{{ __('Your name') }}<input x-model="form.name" required minlength="2" maxlength="20" autocomplete="nickname" placeholder="{{ __('e.g. Khalid') }}"></label>
                     <fieldset><legend>{{ __('Seats') }}</legend><div class="carta-seat-options"><template x-for="n in [2,3,4,5,6]" :key="n"><button type="button" :class="{ selected: form.capacity === n }" :aria-pressed="form.capacity === n" @click="form.capacity = n" x-text="n"></button></template></div></fieldset>
                     <button class="carta-primary" :disabled="busy"><span x-text="busy ? t('Opening…') : t('Create table')"></span><i data-icon="arrow-right"></i></button>
                 </form>

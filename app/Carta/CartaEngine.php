@@ -113,6 +113,10 @@ final class CartaEngine
                 $state->pendingDraw += 2;
             }
             $this->advance($state, $seat);
+            // No 1 to answer a skip, or no 2 to answer a +2: nothing to decide, so the penalty applies at once.
+            if ($state->pendingEffect !== CartaState::NONE && ! $this->legalCards($state, $state->currentSeat)) {
+                $this->accept($state, $state->currentSeat);
+            }
         }
         $this->assertConserved($state);
 
