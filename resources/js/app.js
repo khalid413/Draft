@@ -1,10 +1,12 @@
 import Alpine from 'alpinejs';
 import draftDuel from './draftDuel';
+import carta from './carta';
 import { reducedMotion } from './animations';
 import { renderIcons } from './icons';
 
 window.Alpine = Alpine;
 Alpine.data('draftDuel', draftDuel);
+Alpine.data('carta', carta);
 Alpine.start();
 // Server-rendered admin pages have no Alpine component to draw their icons.
 if (document.querySelector('.admin-rooms')) renderIcons();

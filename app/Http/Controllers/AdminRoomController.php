@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Carta\CartaState;
 use App\Events\RoomChanged;
+use App\Models\CartaGame;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,8 @@ class AdminRoomController extends Controller
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
             if ($room->status !== 'banned') {
                 $room->update(['status' => 'banned', 'version' => $room->version + 1]);
+                // A banned Carta table's running match is cancelled, not left half-played.
+                CartaGame::where('room_id', $room->id)->where('status', CartaState::PLAYING)->update(['status' => CartaState::CANCELLED]);
             }
 
             return $room;

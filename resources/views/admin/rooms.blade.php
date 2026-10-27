@@ -23,7 +23,7 @@
                 <div class="room-row-main">
                     <strong class="room-row-code">{{ $room->code }}</strong>
                     <span class="room-status room-status-{{ $state }}">{{ ucfirst($state) }}</span>
-                    <small>{{ ($s['domain'] ?? '') === 'football' ? 'Football 4-3-3' : (($s['catalog'] ?? null) ?: 'All characters').' · '.($s['rounds'] ?? '?').' rounds' }} · {{ count($room->members) }}/{{ $s['capacity'] ?? '?' }} seats{{ ($s['timer'] ?? false) ? ' · 30s timer' : '' }}</small>
+                    <small>{{ $room->game_type === 'carta' ? 'Moroccan Carta' : (($s['domain'] ?? '') === 'football' ? 'Football 4-3-3' : (($s['catalog'] ?? null) ?: 'All characters').' · '.($s['rounds'] ?? '?').' rounds') }} · {{ count($room->members) }}/{{ $s['capacity'] ?? '?' }} seats{{ ($s['timer'] ?? false) ? ' · 30s timer' : '' }}</small>
                 </div>
                 <ul class="room-row-players" aria-label="Players in room {{ $room->code }}">
                     @foreach($room->members as $index => $member)

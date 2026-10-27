@@ -21,6 +21,7 @@ import lightningCharge from 'bootstrap-icons/icons/lightning-charge.svg?raw';
 import lock from 'bootstrap-icons/icons/lock.svg?raw';
 import musicNoteBeamed from 'bootstrap-icons/icons/music-note-beamed.svg?raw';
 import pauseFill from 'bootstrap-icons/icons/pause-fill.svg?raw';
+import people from 'bootstrap-icons/icons/people.svg?raw';
 import phone from 'bootstrap-icons/icons/phone.svg?raw';
 import playFill from 'bootstrap-icons/icons/play-fill.svg?raw';
 import share from 'bootstrap-icons/icons/share.svg?raw';
@@ -35,7 +36,7 @@ import xLg from 'bootstrap-icons/icons/x-lg.svg?raw';
 const icons = {
     'arrow-counterclockwise': arrowCounterclockwise, 'arrow-left': arrowLeft, 'arrow-left-right': arrowLeftRight,
     'arrow-right': arrowRight, 'arrow-up-right': arrowUpRight, 'box-arrow-right': boxArrowRight, 'check-lg': checkLg, copy, image, layers,
-    'lightning-charge': lightningCharge, lock, 'music-note-beamed': musicNoteBeamed, 'pause-fill': pauseFill, phone,
+    'lightning-charge': lightningCharge, lock, 'music-note-beamed': musicNoteBeamed, 'pause-fill': pauseFill, people, phone,
     'play-fill': playFill, share, 'skip-backward': skipBackward, 'skip-forward': skipForward, stars, trophy,
     'volume-mute': volumeMute, 'volume-up': volumeUp, 'x-lg': xLg,
     'arrow-down': arrowDown, 'arrow-up': arrowUp, 'cloud-arrow-up': cloudArrowUp, 'door-open': doorOpen, inbox,

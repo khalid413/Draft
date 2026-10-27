@@ -12,6 +12,12 @@ The starter catalog has 67 football cards, including 12 CMs to support four team
 
 Verify with `php artisan test` and `npm run build`. Multiplayer tests cover equal roster sizes, every formation slot, hidden cards, persistence, balanced pickers, league scoring and HTTP validation.
 
+## Moroccan Carta (`/carta`)
+
+Multiplayer Carta for 2–6 players with the 40-card Spanish/Moroccan deck (`public/cards/{suit}/{suit}_{rank}.webp`, back at `public/cards/back.webp`). Match the suit or number; **1** skips the next player, **2** makes them draw two, **7** is wild and changes the suit. 1s and 2s stack to pass the penalty on. Players finish in ranked order and the match continues until one player is left holding cards: the loser.
+
+The server owns every rule: `app/Carta/CartaEngine.php` (state machine), `CartaStore` (games, per-seat hands and ranks, move history), `CartaView` (per-player view that never includes opponents' cards or the draw pile) and `CartaController` (locked transactions, version checks, retry-safe action ids). Rooms, seats, Reverb updates and admin bans are shared with Draft Duel through `app/Rooms/RoomLobby.php`. Tests: `tests/Unit/CartaEngineTest.php` and `tests/Feature/CartaRoomTest.php`.
+
 **Start with [DELIVERY.md](DELIVERY.md)** for the complete ordered implementation guide, file inventory, setup commands, verification results and Phase 2 plan.
 
 The Laravel framework information below is retained from the project scaffold.

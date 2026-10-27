@@ -9,6 +9,7 @@
     <span class="eyebrow">PICK YOUR GAME</span><h1>Let's play.</h1><p>Good friends. Tough choices.</p>
     <button class="mode-feature" @click="screen = 'draft-type'"><span class="mode-art"><i data-icon="layers"></i><b>?</b></span><span><strong>Draft</strong><small>Keep one. Give one. Own the result.</small></span><i data-icon="arrow-up-right"></i></button>
     <button class="secondary-button" @click="screen = 'join'">Join a room <i data-icon="arrow-right"></i></button>
+    <a href="/carta" class="secondary-button carta-entry"><img src="/cards/back.webp" alt="" width="18" height="27"> Moroccan Carta <i data-icon="arrow-up-right"></i></a>
     <button class="admin-corner" @click="adminTap()" aria-label="Administrator access: activate three times"><span>· · ·</span></button>
 </section>
 

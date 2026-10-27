@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminRoomController;
 use App\Http\Controllers\CardController;
+use App\Http\Controllers\CartaController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SongController;
@@ -43,6 +44,13 @@ Route::middleware(RequireAdmin::class)->prefix('admin/music')->controller(SongCo
 Route::middleware(RequireAdmin::class)->prefix('admin/rooms')->controller(AdminRoomController::class)->group(function () {
     Route::get('/', 'index')->name('admin.rooms');
     Route::post('/{room}/ban', 'ban')->name('admin.rooms.ban')->middleware('throttle:30,1');
+});
+Route::get('/carta', [CartaController::class, 'page'])->name('carta');
+Route::prefix('carta/rooms')->middleware('throttle:rooms')->controller(CartaController::class)->group(function () {
+    Route::post('/', 'create')->block()->middleware('throttle:10,1');
+    Route::post('/join', 'join')->block()->middleware('throttle:15,1');
+    Route::get('/{room}', 'state')->block();
+    Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'leave', 'start', 'rematch', 'play', 'draw', 'accept', 'pass'])->block();
 });
 Route::prefix('rooms')->middleware('throttle:rooms')->controller(RoomController::class)->group(function () {
     Route::post('/', 'create')->block()->middleware('throttle:10,1');

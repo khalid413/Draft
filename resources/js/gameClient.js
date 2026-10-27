@@ -47,6 +47,12 @@ export const gameClient = {
         return () => { clearInterval(timer); echo?.disconnect(); };
     },
     songs: () => request('/music'),
+    carta: {
+        create: (name, capacity) => request('/carta/rooms', { name, capacity }),
+        join: (code, name) => request('/carta/rooms/join', { code, name }),
+        room: id => request(`/carta/rooms/${id}`),
+        action: (id, action, version, payload = {}) => request(`/carta/rooms/${id}/${action}`, { ...payload, version }),
+    },
     state: () => request('/game/state'),
     start: (settings, replace = false) => request('/game/start', { ...settings, replace }),
     action: (action, version, payload = {}) => request(`/game/${action}`, { ...payload, version }),

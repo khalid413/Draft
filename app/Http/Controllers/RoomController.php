@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\GamePhase;
-use App\Events\RoomChanged;
 use App\Game\GameEngine;
 use App\Game\GameState;
 use App\Http\Requests\RoomSettingsRequest;
 use App\Models\Game;
 use App\Models\Room;
 use App\Rooms\RoomAccess;
+use App\Rooms\RoomLobby;
 use App\Rooms\RoomView;
 use DomainException;
 use Illuminate\Http\Request;
@@ -19,20 +19,19 @@ use Illuminate\Support\Str;
 
 class RoomController extends Controller
 {
-    public function __construct(private GameEngine $engine, private RoomAccess $access, private RoomView $view) {}
-
-    private function member(string $name, string $token): array
-    {
-        return ['name' => $name, 'ready' => false, 'token_hash' => hash('sha256', $token)];
-    }
+    public function __construct(private GameEngine $engine, private RoomAccess $access, private RoomView $view, private RoomLobby $lobby) {}
 
     private function notify(Room $room): void
     {
-        try {
-            event(new RoomChanged($room->id, $room->version));
-        } catch (\Throwable $error) {
-            report($error);
-        } // HTTP resync remains available during a socket outage.
+        $this->lobby->notify($room);
+    }
+
+    /** Draft Duel endpoints never touch rooms that belong to another game. */
+    private function draftRoom(Room $room): Room
+    {
+        abort_unless($room->game_type === 'draft', 404);
+
+        return $room;
     }
 
     private function reply(Room $room, int $index)
@@ -42,52 +41,19 @@ class RoomController extends Controller
 
     public function create(RoomSettingsRequest $request)
     {
-        $token = bin2hex(random_bytes(32));
-        do {
-            $code = strtoupper(Str::random(8));
-        } while (Room::where('code', $code)->exists());
-        $room = Room::create(['id' => (string) Str::uuid(), 'code' => $code, 'settings' => $request->settings(),
-            'members' => [$this->member($request->validated('name'), $token)], 'expires_at' => now()->addDay()]);
-        $request->session()->put('room_tokens.'.$room->id, $token);
-
-        return $this->reply($room->refresh(), 0);
+        return $this->reply($this->lobby->open($request, 'draft', $request->validated('name'), $request->settings()), 0);
     }
 
     public function join(Request $request)
     {
-        $request->merge(['code' => is_string($request->input('code')) ? strtoupper(trim($request->input('code'))) : $request->input('code'), 'name' => is_string($request->input('name')) ? trim($request->input('name')) : $request->input('name')]);
-        $data = $request->validate(['code' => 'required|string|size:8|alpha_num:ascii', 'name' => 'required|string|min:2|max:20']);
-        $token = bin2hex(random_bytes(32));
-        [$room, $index, $existing] = DB::transaction(function () use ($request, $data, $token) {
-            $room = Room::where('code', $data['code'])->lockForUpdate()->firstOrFail();
-            abort_if($room->isClosed(), 410, 'This room is closed.');
-            if ($request->session()->has('room_tokens.'.$room->id)) {
-                return [$room, $this->access->index($request, $room), true];
-            }
-            if ($room->status !== 'lobby' || count($room->members) >= $room->settings['capacity']) {
-                throw new DomainException('This room has started or is full.');
-            }
-            foreach ($room->members as $member) {
-                if (mb_strtolower($member['name']) === mb_strtolower($data['name'])) {
-                    throw new DomainException('That name is already taken in this room.');
-                }
-            }
-            $members = $room->members;
-            $members[] = $this->member($data['name'], $token);
-            $room->update(['members' => $members, 'version' => $room->version + 1]);
-
-            return [$room, count($members) - 1, false];
-        }, 3);
-        if (! $existing) {
-            $request->session()->put('room_tokens.'.$room->id, $token);
-        }
-        $this->notify($room);
+        [$room, $index] = $this->lobby->join($request, 'draft');
 
         return $this->reply($room, $index);
     }
 
     public function state(Request $request, Room $room)
     {
+        $this->draftRoom($room);
         $index = $this->access->index($request, $room);
         $changed = false;
         // Any seated player can drive an expired server timer; concurrent polls serialize here.
@@ -117,6 +83,7 @@ class RoomController extends Controller
 
     public function settings(RoomSettingsRequest $request, Room $room)
     {
+        $this->draftRoom($room);
         $room = DB::transaction(function () use ($request, $room) {
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
             abort_unless($this->access->index($request, $room) === $room->host, 403);
@@ -141,6 +108,7 @@ class RoomController extends Controller
 
     public function action(Request $request, Room $room, string $action)
     {
+        $this->draftRoom($room);
         $request->validate(['version' => 'required|integer|min:0', 'cardId' => 'sometimes|string|max:100', 'matchIndex' => 'sometimes|integer|min:0|max:5', 'ready' => 'sometimes|boolean', 'editing' => 'sometimes|boolean']);
         [$room, $index] = DB::transaction(function () use ($request, $room, $action) {
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
@@ -149,12 +117,7 @@ class RoomController extends Controller
                 throw new DomainException('The room changed. Please try again.');
             }
             if ($action === 'ready') {
-                if ($room->status !== 'lobby') {
-                    throw new DomainException('The draft has already started.');
-                }
-                $members = $room->members;
-                $members[$index]['ready'] = $request->boolean('ready');
-                $room->members = $members;
+                $this->lobby->setReady($room, $index, $request->boolean('ready'));
             } elseif ($action === 'editing') {
                 // Only announces that the host is in the settings screen; nobody loses their seat.
                 abort_unless($index === $room->host, 403);
@@ -241,37 +204,11 @@ class RoomController extends Controller
     /** Lobby seats are released; during a match only the host may leave and hosting passes on. */
     private function leave(Room $room, int $index): void
     {
-        if ($room->status === 'lobby') {
-            $members = $room->members;
-            unset($members[$index]);
-            $room->members = array_values($members);
-            if (! $room->members) {
-                $room->status = 'closed';
-            } elseif ($index < $room->host) {
-                $room->host--;
-            } elseif ($index === $room->host) {
-                $room->host = $index % count($room->members);
-                $room->host_editing_at = null;
-            }
-
-            return;
-        }
+        // Draft Duel keeps guest seats reserved mid-match; only the host may hand over and leave.
         if ($index !== $room->host && $room->status === 'playing') {
             throw new DomainException('Your seat stays reserved during a match. You can return using this browser.');
         }
-        $members = $room->members;
-        $members[$index]['left'] = true;
-        $room->members = $members;
-        $seats = $room->activeSeats();
-        if (! $seats) {
-            $room->status = 'closed';
-
-            return;
-        }
-        if ($index === $room->host) {
-            $room->host = collect($seats)->first(fn ($seat) => $seat > $index) ?? $seats[0];
-        }
-        if ($room->status === 'playing') {
+        if ($this->lobby->leave($room, $index)) {
             $game = Game::whereKey($room->game_uuid)->lockForUpdate()->firstOrFail();
             $state = GameState::fromArray($game->state);
             $this->pickForDepartedSeat($room, $state);
@@ -279,22 +216,13 @@ class RoomController extends Controller
         }
     }
 
-    /** Back to the lobby with the same settings; departed seats are released so new friends can join. */
     private function rematch(Room $room): void
     {
-        if ($room->status !== 'finished') {
-            throw new DomainException('Finish the draft first.');
-        }
-        if (($room->playback['startsAt'] ?? 0) + 15000 > (int) (microtime(true) * 1000)) {
+        // A shared football replay finishes for everyone before the room resets.
+        if ($room->status === 'finished' && ($room->playback['startsAt'] ?? 0) + 15000 > (int) (microtime(true) * 1000)) {
             throw new DomainException('Wait for this match to finish.');
         }
-        $seats = $room->activeSeats();
-        $room->host = array_search($room->host, $seats, true);
-        $room->members = array_map(fn ($seat) => [...$room->members[$seat], 'ready' => false], $seats);
-        $room->status = 'lobby';
-        $room->game_uuid = null;
-        $room->playback = null;
-        $room->host_editing_at = null;
+        $this->lobby->rematch($room);
     }
 
     /** A departed seat never blocks the draft: its pick is made at random and revealed at once. */
