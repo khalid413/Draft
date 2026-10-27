@@ -69,7 +69,7 @@ class CartaRoomTest extends TestCase
         if ($playable) {
             return $this->send($view, $seat, 'play', ['card' => $playable[0]['id'], 'suit' => $playable[0]['rank'] === 7 ? 'cups' : null])->assertOk()->json();
         }
-        $action = $you['canAccept'] ? 'accept' : ($you['canPass'] ? 'pass' : 'draw');
+        $action = $you['canAccept'] ? 'accept' : 'draw';
 
         return $this->send($view, $seat, $action)->assertOk()->json();
     }
@@ -126,9 +126,6 @@ class CartaRoomTest extends TestCase
         $unplayable = array_values(array_filter($mine, fn ($card) => ! $card['playable']));
         if ($unplayable) {
             $this->send($room, $current, 'play', ['card' => $unplayable[0]['id']])->assertUnprocessable();
-        }
-        if (array_filter($mine, fn ($card) => $card['playable'])) {
-            $this->send($room, $current, 'draw')->assertUnprocessable()->assertJsonPath('message', 'You have a playable card, so you cannot draw.');
         }
         $this->seat(9)->getJson('/carta/rooms/'.$room['id'])->assertForbidden();
         $this->seat($current)->postJson('/carta/rooms/'.$room['id'].'/draw', ['version' => $room['version'] - 1, 'actionId' => (string) Str::uuid()])->assertUnprocessable()->assertJsonPath('message', 'The table changed. Please try again.');

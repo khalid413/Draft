@@ -47,10 +47,8 @@ final class CartaView
                 'left' => $room->members[$seat]['left'] ?? false], array_keys($state->players)),
             'hand' => $me ? array_map(fn ($id) => [...Card::fromId($id)->toArray(), 'playable' => in_array($id, $legal, true)], $me['hand']) : [],
             'you' => $me ? ['seat' => $viewer, 'status' => $me['status'], 'rank' => $me['rank'], 'isTurn' => $isTurn,
-                'canDraw' => $isTurn && $state->pendingEffect === CartaState::NONE && $state->drawnCard === null && ! $legal,
-                'canAccept' => $isTurn && $state->pendingEffect !== CartaState::NONE,
-                'canPass' => $isTurn && $state->drawnCard !== null,
-                'drawnCard' => $isTurn ? $state->drawnCard : null] : null,
+                'canDraw' => $isTurn && $state->pendingEffect === CartaState::NONE,
+                'canAccept' => $isTurn && $state->pendingEffect !== CartaState::NONE] : null,
             'rankings' => $this->rankings($state),
             'recent' => $this->recent($game, $names),
         ];

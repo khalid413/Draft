@@ -50,10 +50,7 @@ final class CartaEngine
         if ($state->status !== CartaState::PLAYING || $state->currentSeat !== $seat || ! $state->isActive($seat)) {
             return [];
         }
-        // After drawing, only the card just drawn may still be played this turn.
-        $candidates = $state->drawnCard !== null ? [$state->drawnCard] : $state->players[$seat]['hand'];
-
-        return array_values(array_filter($candidates, fn ($id) => $this->canPlay($state, Card::fromId($id))));
+        return array_values(array_filter($state->players[$seat]['hand'], fn ($id) => $this->canPlay($state, Card::fromId($id))));
     }
 
     private function canPlay(CartaState $state, Card $card): bool
@@ -61,7 +58,7 @@ final class CartaEngine
         return match ($state->pendingEffect) {
             CartaState::SKIP => $card->rank === 1,
             CartaState::DRAW_TWO => $card->rank === 2,
-            default => $card->rank === 7 || $card->suit === $state->activeSuit || $card->rank === $state->topCard()->rank,
+            default => $card->suit === $state->activeSuit || $card->rank === $state->topCard()->rank,
         };
     }
 
@@ -73,9 +70,6 @@ final class CartaEngine
         $position = array_search($cardId, $hand, true);
         if ($position === false) {
             throw new DomainException(__('That card is not in your hand.'));
-        }
-        if ($state->drawnCard !== null && $cardId !== $state->drawnCard) {
-            throw new DomainException(__('After drawing you can only play the card you drew, or pass.'));
         }
         if (! $this->canPlay($state, $card)) {
             throw new DomainException(match ($state->pendingEffect) {
@@ -92,7 +86,6 @@ final class CartaEngine
         unset($hand[$position]);
         $state->players[$seat]['hand'] = array_values($hand);
         $state->discardPile[] = $cardId;
-        $state->drawnCard = null;
         $state->events[] = ['type' => 'play', 'seat' => $seat, 'card' => $cardId, 'suit' => $card->rank === 7 && ! $finishing ? $suit : null];
 
         if ($finishing) {
@@ -123,27 +116,17 @@ final class CartaEngine
         return $state;
     }
 
-    /** Only allowed with no playable card and no pending effect. A playable drawn card may be played right away. */
+    /** Allowed whenever no penalty is waiting, even holding a playable card. Drawing always ends the turn. */
     public function draw(CartaState $state, int $seat): CartaState
     {
         $this->assertTurn($state, $seat);
         if ($state->pendingEffect !== CartaState::NONE) {
             throw new DomainException(__('Answer the special card or accept its penalty first.'));
         }
-        if ($state->drawnCard !== null) {
-            throw new DomainException(__('You already drew this turn.'));
-        }
-        if ($this->legalCards($state, $seat)) {
-            throw new DomainException(__('You have a playable card, so you cannot draw.'));
-        }
         $cards = $this->take($state, 1);
         $state->players[$seat]['hand'] = [...$state->players[$seat]['hand'], ...$cards];
         $state->events[] = ['type' => 'draw', 'seat' => $seat, 'card' => $cards[0] ?? null, 'amount' => count($cards)];
-        if ($cards && $this->canPlay($state, Card::fromId($cards[0]))) {
-            $state->drawnCard = $cards[0];
-        } else {
-            $this->advance($state, $seat);
-        }
+        $this->advance($state, $seat);
         $this->assertConserved($state);
 
         return $state;
@@ -167,19 +150,6 @@ final class CartaEngine
         $state->pendingDraw = 0;
         $this->advance($state, $seat);
         $this->assertConserved($state);
-
-        return $state;
-    }
-
-    /** Ends the turn after drawing a card the player chooses not to play. */
-    public function pass(CartaState $state, int $seat): CartaState
-    {
-        $this->assertTurn($state, $seat);
-        if ($state->drawnCard === null) {
-            throw new DomainException(__('You can only pass after drawing a playable card.'));
-        }
-        $state->events[] = ['type' => 'pass', 'seat' => $seat];
-        $this->advance($state, $seat);
 
         return $state;
     }
@@ -209,7 +179,6 @@ final class CartaEngine
             $state->events[] = ['type' => 'finish', 'seat' => $winner, 'amount' => $rank];
             $state->status = CartaState::FINISHED;
             $state->currentSeat = null;
-            $state->drawnCard = null;
             $state->pendingEffect = CartaState::NONE;
             $state->pendingDraw = 0;
         } elseif ($state->currentSeat === $seat) {
@@ -230,12 +199,8 @@ final class CartaEngine
             return $this->accept($state, $seat);
         }
         $legal = $this->legalCards($state, $seat);
-        if (! $legal && $state->drawnCard === null) {
-            $this->draw($state, $seat);
-            if ($state->currentSeat !== $seat || $state->drawnCard === null) {
-                return $state;
-            }
-            $legal = [$state->drawnCard];
+        if (! $legal) {
+            return $this->draw($state, $seat);
         }
         $card = Card::fromId($legal[0]);
 
@@ -283,7 +248,6 @@ final class CartaEngine
     private function advance(CartaState $state, int $from): void
     {
         $state->currentSeat = $this->nextActiveSeat($state, $from);
-        $state->drawnCard = null;
         $state->turnNumber++;
     }
 
@@ -325,7 +289,6 @@ final class CartaEngine
             $state->events[] = ['type' => 'lose', 'seat' => $loser, 'amount' => $loserRank];
             $state->status = CartaState::FINISHED;
             $state->currentSeat = null;
-            $state->drawnCard = null;
         }
     }
 

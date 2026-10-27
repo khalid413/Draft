@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 /** Moroccan Carta rooms. The browser only sends intents; every rule is applied by CartaEngine here. */
 class CartaController extends Controller
 {
-    private const GAME_ACTIONS = ['play', 'draw', 'accept', 'pass'];
+    private const GAME_ACTIONS = ['play', 'draw', 'accept'];
 
     public function __construct(private CartaEngine $engine, private CartaStore $store, private CartaView $view,
         private RoomAccess $access, private RoomLobby $lobby) {}
@@ -127,7 +127,6 @@ class CartaController extends Controller
             'play' => $this->engine->play($state, $seat, $this->cardId($request->input('card')), $request->input('suit')),
             'draw' => $this->engine->draw($state, $seat),
             'accept' => $this->engine->accept($state, $seat),
-            'pass' => $this->engine->pass($state, $seat),
         };
 
         $this->store->save($game, $state, $request->input('actionId'));

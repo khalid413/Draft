@@ -1,6 +1,7 @@
 import { gameClient } from './gameClient';
 import { renderIcons } from './icons';
 import { t, tn, ordinal, locale } from './i18n';
+import { animateMoves } from './cartaMotion';
 
 const ROOM_KEY = 'carta-room-id';
 // English names are translation keys; the Darija names stay as a subtitle in every other language.
@@ -17,7 +18,7 @@ const SEATS = { 1: ['top'], 2: ['left', 'right'], 3: ['left', 'top', 'right'], 4
 export default () => ({
     suits: SUITS, screen: 'home', loading: true, busy: false, error: '',
     room: null, stopWatch: null, form: { name: '', capacity: 4, code: '', joinName: '' },
-    suitPicker: null, toasts: [], seenMove: null, copied: '',
+    suitPicker: null, toasts: [], seenMove: null, copied: '', playedFrom: {},
 
     get game() { return this.room?.game || null; },
     get me() { return this.game?.you || null; },
@@ -37,9 +38,8 @@ export default () => ({
         if (!this.me?.isTurn) return t(':name is playing…', { name: this.currentName });
         if (game.pending.effect === 'SKIP') return t('Skip! Answer with a 1, or accept losing your turn.');
         if (game.pending.effect === 'DRAW_TWO') return t('+:count for you! Answer with a 2, or draw them.', { count: game.pending.draw });
-        if (this.me.canPass) return t('You drew a playable card. Play it or pass.');
-        if (this.me.canDraw) return t('No playable card. Draw one from the pile.');
-        return t('Your turn. Play a card of the same suit or number.');
+        if (!game.hand.some(card => card.playable)) return t('No playable card. Draw one from the pile.');
+        return t('Your turn. Play a card of the same suit or number, or draw one.');
     },
     pendingText() {
         const pending = this.game?.pending;
@@ -63,6 +63,24 @@ export default () => ({
         if (this.game?.status === 'FINISHED') return t('Match over');
         if (this.me?.status === 'FINISHED') return t('Spectating');
         return this.me?.isTurn ? t('Your turn') : t('Round in progress');
+    },
+    // How the finished match ended for the viewer: win, a middle place, lose, or watch (no seat in the ranking).
+    get outcome() {
+        const mine = this.game?.rankings?.find(row => row.seat === this.room?.viewerIndex);
+        if (!mine) return 'watch';
+        if (mine.rank === 1) return 'win';
+        return mine.status === 'LOSER' ? 'lose' : 'place';
+    },
+    get outcomeTitle() {
+        return { win: t('VICTORY'), lose: t('DEFEAT'), place: t('MATCH OVER'), watch: t('MATCH OVER') }[this.outcome];
+    },
+    get outcomeText() {
+        const rankings = this.game?.rankings || [];
+        const mine = rankings.find(row => row.seat === this.room?.viewerIndex);
+        if (this.outcome === 'win') return t('You won the match!');
+        if (this.outcome === 'lose') return t('You are the last one holding cards.');
+        if (this.outcome === 'place') return t('You finished :rank!', { rank: ordinal(mine.rank) });
+        return t(':name won the match!', { name: rankings[0]?.name || '' });
     },
     rankTag(player) {
         if (player.status === 'LOSER') return t('Loser');
@@ -98,18 +116,24 @@ export default () => ({
     accept(room) {
         if (!room?.id) return;
         if (this.room?.id === room.id && this.room.version > room.version) return; // Never step back to an older table.
-        this.announce(room.game);
+        const fresh = this.announce(room.game);
         this.room = room;
         this.screen = room.game ? 'table' : 'lobby';
         if (!room.game) this.suitPicker = null;
-        this.$nextTick(renderIcons);
+        this.$nextTick(() => {
+            renderIcons();
+            if (!fresh.length) return;
+            animateMoves(document.querySelector('.carta-stage'), fresh, room.game, room.viewerIndex, this.playedFrom);
+            this.playedFrom = {};
+        });
     },
     // Short notices for what other players did since the last update (finishes, penalties, reshuffles).
     announce(game) {
         const moves = game?.recent || [];
         const last = moves.length ? moves[moves.length - 1].id : null;
-        if (this.seenMove !== null) {
-            moves.filter(move => move.id > this.seenMove).forEach(move => {
+        const fresh = this.seenMove === null ? [] : moves.filter(move => move.id > this.seenMove);
+        if (fresh.length) {
+            fresh.forEach(move => {
                 // Whole sentences per case: word order and agreement differ between English, French and Arabic.
                 const mine = move.seat === this.room?.viewerIndex, name = move.name, rank = ordinal(move.amount || 0);
                 const text = {
@@ -124,6 +148,7 @@ export default () => ({
             });
         }
         this.seenMove = last ?? this.seenMove;
+        return fresh;
     },
     notify(text, kind = 'info') {
         const toast = { id: Date.now() + Math.random(), text, kind };
@@ -152,7 +177,7 @@ export default () => ({
     async act(action, payload = {}) {
         if (!this.room) return false;
         const ok = await this.run(async () => {
-            const actionId = ['play', 'draw', 'accept', 'pass'].includes(action) ? crypto.randomUUID() : undefined;
+            const actionId = ['play', 'draw', 'accept'].includes(action) ? crypto.randomUUID() : undefined;
             const next = await gameClient.carta.action(this.room.id, action, this.room.version, actionId ? { ...payload, actionId } : payload);
             if (next?.id) this.accept(next);
         });
@@ -161,6 +186,9 @@ export default () => ({
     },
     play(card) {
         if (!card.playable || this.busy) return;
+        // Remember where the card was, so it flies from the hand to the pile once the server accepts it.
+        const rect = document.querySelector(`[data-card="${card.id}"]`)?.getBoundingClientRect();
+        if (rect) this.playedFrom = { [card.id]: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
         if (card.rank === 7 && this.game.hand.length > 1) { this.suitPicker = card.id; return; }
         this.act('play', { card: card.id });
     },

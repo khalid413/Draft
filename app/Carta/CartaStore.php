@@ -36,7 +36,7 @@ final class CartaStore
 
         return new CartaState(status: $game->status, players: $players, drawPile: $game->draw_pile, discardPile: $game->discard_pile,
             currentSeat: $game->current_seat, activeSuit: $game->active_suit, pendingEffect: $game->pending_effect,
-            pendingDraw: $game->pending_draw, drawnCard: $game->drawn_card, turnNumber: $game->turn_number);
+            pendingDraw: $game->pending_draw, turnNumber: $game->turn_number);
     }
 
     /** Writes the state, bumps the version and appends the action's moves; the first move carries the client's action id. */
@@ -44,7 +44,7 @@ final class CartaStore
     {
         $game->update(['status' => $state->status, 'turn_number' => $state->turnNumber, 'current_seat' => $state->currentSeat,
             'active_suit' => $state->activeSuit, 'pending_effect' => $state->pendingEffect, 'pending_draw' => $state->pendingDraw,
-            'drawn_card' => $state->drawnCard, 'draw_pile' => $state->drawPile, 'discard_pile' => $state->discardPile,
+            'draw_pile' => $state->drawPile, 'discard_pile' => $state->discardPile,
             'version' => $game->version + 1, 'finished_at' => $state->status === CartaState::FINISHED ? ($game->finished_at ?? now()) : null]);
         $rows = $game->players()->get()->keyBy('seat');
         foreach ($state->players as $seat => $player) {

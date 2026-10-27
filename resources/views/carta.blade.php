@@ -84,12 +84,11 @@
                             <div class="carta-pile-label"><b>{{ __('Draw pile') }}</b><span x-text="tn(':count card|:count cards', game.drawCount)"></span></div>
                         </div>
                         <div class="carta-pile-wrap">
-                            <div class="carta-pile discard" aria-live="polite"><template x-for="card in [game.top]" :key="game.discardCount"><img :src="card.image" :alt="cardLabel(card)" class="carta-top"></template></div>
-                            <div class="carta-pile-label"><b>{{ __('Discard pile') }}</b><span x-text="cardLabel(game.top)"></span></div>
+                            {{-- No caption: the face-up card speaks for itself; screen readers get its name. --}}
+                            <div class="carta-pile discard" aria-live="polite" :aria-label="`{{ __('Discard pile') }}: ${cardLabel(game.top)}`"><template x-for="card in [game.top]" :key="game.discardCount"><img :src="card.image" :alt="cardLabel(card)" class="carta-top"></template></div>
                         </div>
-                        <div class="carta-suit-panel" :class="'suit-' + game.activeSuit">
-                            <span>{{ __('Active suit') }}</span>
-                            <span class="carta-suit-emblem" :style="`background-image:url(/cards/${game.activeSuit}/${game.activeSuit}_1.webp)`" aria-hidden="true"></span>
+                        <div class="carta-suit-panel" :class="'suit-' + game.activeSuit" role="group" aria-label="{{ __('Active suit') }}">
+                            <template x-for="suit in [game.activeSuit]" :key="suit"><img class="carta-suit-card" :src="`/cards/suits/${suit}.webp`" alt="" aria-hidden="true"></template>
                             <b x-text="suitTitle(game.activeSuit)"></b><small x-show="suitSubtitle(game.activeSuit)" x-text="suitSubtitle(game.activeSuit)"></small>
                         </div>
                     </div>
@@ -98,7 +97,7 @@
             </div>
 
             <template x-for="(player, i) in opponents" :key="player.seat">
-                <div class="carta-seat" :class="'pos-' + seatPosition(i) + (player.isTurn && game.status === 'PLAYING' ? ' turn' : '') + (player.status !== 'ACTIVE' ? ' done' : '')">
+                <div class="carta-seat" :data-seat="player.seat" :class="'pos-' + seatPosition(i) + (player.isTurn && game.status === 'PLAYING' ? ' turn' : '') + (player.status !== 'ACTIVE' ? ' done' : '')">
                     <div class="carta-chip">
                         <span class="carta-avatar" :class="'tone-' + (player.seat % 6)" x-text="initial(player.name)"></span>
                         <div><strong x-text="player.name"></strong><small :class="{ win: player.rank === 1, lose: player.status === 'LOSER' }" x-text="rankTag(player)"></small></div>
@@ -110,12 +109,11 @@
 
             <div class="carta-seat-me" :class="{ turn: me?.isTurn && game.status === 'PLAYING' }">
                 {{-- Above your hand, so the fanned cards can never cover them. --}}
-                <div x-show="me?.canAccept || me?.canPass" class="carta-actions">
-                    <button x-show="me?.canAccept" class="carta-danger" @click="act('accept')" :disabled="busy" x-text="game.pending.effect === 'SKIP' ? t('Accept the skip') : tn('Take :count card|Take :count cards', game.pending.draw)"></button>
-                    <button x-show="me?.canPass" class="carta-secondary" @click="act('pass')" :disabled="busy">{{ __('Keep it and pass') }}</button>
+                <div x-show="me?.canAccept" class="carta-actions">
+                    <button class="carta-danger" @click="act('accept')" :disabled="busy" x-text="game.pending.effect === 'SKIP' ? t('Accept the skip') : tn('Take :count card|Take :count cards', game.pending.draw)"></button>
                 </div>
                 <div class="carta-hand" :style="`--n:${Math.max(1, game.hand.length)}`">
-                    <template x-for="(card, index) in game.hand" :key="card.id"><button class="carta-card" :class="{ playable: card.playable, drawn: card.id === me?.drawnCard }" :style="fanStyle(index, game.hand.length, 6)" :disabled="!card.playable || busy" @click="play(card)" :aria-label="card.playable ? t('Play :card', { card: cardLabel(card) }) : cardLabel(card)"><img :src="card.image" :alt="cardLabel(card)"></button></template>
+                    <template x-for="(card, index) in game.hand" :key="card.id"><button class="carta-card" :data-card="card.id" :class="{ playable: card.playable }" :style="fanStyle(index, game.hand.length, 6)" :disabled="!card.playable || busy" @click="play(card)" :aria-label="card.playable ? t('Play :card', { card: cardLabel(card) }) : cardLabel(card)"><img :src="card.image" :alt="cardLabel(card)"></button></template>
                     <p x-show="me && me.status !== 'ACTIVE' && game.status === 'PLAYING'" class="carta-spectate">{{ __('You are out of cards. Watching the others play it out.') }}</p>
                 </div>
                 <div class="carta-chip me">
@@ -128,9 +126,16 @@
 
         {{-- Results --}}
         <div x-cloak x-show="game?.status === 'FINISHED'" class="carta-overlay" role="dialog" aria-modal="true" aria-labelledby="carta-results-title">
-            <div class="carta-results">
-                <span class="carta-eyebrow">{{ __('MATCH OVER') }}</span>
-                <h2 id="carta-results-title" x-text="game?.rankings?.[0]?.seat === room?.viewerIndex ? t('You won the match!') : t(':name won the match!', { name: game?.rankings?.[0]?.name || '' })"></h2>
+            <div class="carta-results carta-end" :class="'outcome-' + outcome">
+                {{-- Confetti only for the winner; pure decoration. --}}
+                <div x-show="outcome === 'win'" class="carta-confetti" aria-hidden="true"><template x-for="n in 18" :key="n"><i :style="`--i:${n}`"></i></template></div>
+                <div class="carta-end-badge" aria-hidden="true">
+                    <span x-show="outcome === 'win' || outcome === 'watch'"><i data-icon="trophy-fill"></i></span>
+                    <span x-show="outcome === 'place'"><i data-icon="award-fill"></i></span>
+                    <span x-show="outcome === 'lose'"><i data-icon="emoji-frown"></i></span>
+                </div>
+                <span class="carta-eyebrow" x-text="outcomeTitle"></span>
+                <h2 id="carta-results-title" x-text="outcomeText"></h2>
                 <ol><template x-for="row in game?.rankings || []" :key="row.seat"><li :class="{ win: row.rank === 1, lose: row.status === 'LOSER', you: row.seat === room?.viewerIndex }"><b x-text="ordinal(row.rank)"></b><span x-text="row.seat === room?.viewerIndex ? t(':name (you)', { name: row.name }) : row.name"></span><em x-text="row.rank === 1 ? t('Winner') : (row.status === 'LOSER' ? t('Loser') : '')"></em></li></template></ol>
                 <div class="carta-results-actions"><button class="carta-primary" @click="act('rematch')" :disabled="busy"><i data-icon="arrow-counterclockwise"></i> {{ __('Play again') }}</button><button class="carta-secondary" @click="leave()" :disabled="busy">{{ __('Leave table') }}</button></div>
             </div>

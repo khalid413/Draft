@@ -29,6 +29,9 @@ import skipBackward from 'bootstrap-icons/icons/skip-backward.svg?raw';
 import skipForward from 'bootstrap-icons/icons/skip-forward.svg?raw';
 import stars from 'bootstrap-icons/icons/stars.svg?raw';
 import trophy from 'bootstrap-icons/icons/trophy.svg?raw';
+import trophyFill from 'bootstrap-icons/icons/trophy-fill.svg?raw';
+import awardFill from 'bootstrap-icons/icons/award-fill.svg?raw';
+import emojiFrown from 'bootstrap-icons/icons/emoji-frown.svg?raw';
 import volumeMute from 'bootstrap-icons/icons/volume-mute.svg?raw';
 import volumeUp from 'bootstrap-icons/icons/volume-up.svg?raw';
 import xLg from 'bootstrap-icons/icons/x-lg.svg?raw';
@@ -40,7 +43,7 @@ const icons = {
     'play-fill': playFill, share, 'skip-backward': skipBackward, 'skip-forward': skipForward, stars, trophy,
     'volume-mute': volumeMute, 'volume-up': volumeUp, 'x-lg': xLg,
     'arrow-down': arrowDown, 'arrow-up': arrowUp, 'cloud-arrow-up': cloudArrowUp, 'door-open': doorOpen, inbox,
-    'music-note-list': musicNoteList, trash3,
+    'music-note-list': musicNoteList, trash3, 'trophy-fill': trophyFill, 'award-fill': awardFill, 'emoji-frown': emojiFrown,
 };
 
 const template = document.createElement('template');

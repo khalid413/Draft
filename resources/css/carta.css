@@ -135,8 +135,8 @@
 .carta-pile-label b { font-size:13px; }
 .carta-pile-label span { font-size:12px; color:#d8cfbd; }
 .carta-suit-panel { display:grid; justify-items:center; gap:6px; align-self:center; padding:12px 16px; border-radius:14px; background:rgba(6,14,22,.86); border:1px solid #f6efe21a; }
-.carta-suit-panel > span:first-child { font-size:12px; color:#d8cfbd; }
-.carta-suit-emblem { width:48px; height:48px; border-radius:50%; background-size:280%; background-position:50% 46%; border:2.5px solid currentColor; box-shadow:0 0 18px color-mix(in srgb, currentColor 45%, transparent); }
+.carta-suit-card { width:46px; height:auto; aspect-ratio:129/240; border-radius:6px; background:#fff; border:2px solid currentColor; box-shadow:0 0 16px color-mix(in srgb, currentColor 50%, transparent), 0 6px 12px #0008; animation:carta-suit-in .45s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes carta-suit-in { from { opacity:0; transform:rotateY(90deg) scale(.8); } }
 .carta-suit-panel b { color:var(--c-cream); font-size:15px; }
 .carta-suit-panel small { color:currentColor; font-size:12px; }
 .carta-pending { padding:6px 16px; border-radius:30px; font-weight:800; font-size:13px; background:#e2b13c; color:#2a1a02; animation:carta-pulse 1s ease-in-out infinite; }
@@ -185,7 +185,6 @@
 .carta-card.playable { transform:translateY(calc(var(--lift) - 14px)) rotate(var(--rot)); }
 .carta-card.playable img { filter:drop-shadow(0 0 3px #3ddc97) drop-shadow(0 0 10px #3ddc97aa) drop-shadow(0 8px 12px #000a); }
 .carta-card.playable:hover,.carta-card.playable:focus-visible { transform:translateY(calc(var(--lift) - 28px)) rotate(var(--rot)) scale(1.05); z-index:2; }
-.carta-card.drawn { outline:3px solid #3ddc97; outline-offset:2px; }
 .carta-spectate { margin:10px auto; padding:10px 16px; border-radius:12px; background:rgba(8,14,22,.86); color:#d8cfbd; text-align:center; }
 .carta-chip.me { margin-top:2px; }
 
@@ -198,7 +197,7 @@
 .carta-results li.win { background:#e2b13c2a; color:var(--c-gold); font-weight:700; }
 .carta-results li.lose { background:#e0574a26; color:#ff9b8f; }
 .carta-results li.you { box-shadow:inset 0 0 0 1.5px #f6efe266; }
-.carta-results li em { margin-left:auto; font-style:normal; font-size:12px; }
+.carta-results li em { margin-inline-start:auto; font-style:normal; font-size:12px; }
 .carta-results-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 .carta-results-actions svg { width:16px; height:16px; }
 .carta-suit-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
@@ -251,16 +250,15 @@
     .carta-center-row { gap:14px; }
     .carta-pile { width:70px; }
     .carta-pile-label { min-width:0; padding:5px 10px; }
-    .carta-suit-panel { flex-basis:100%; grid-template-columns:auto auto auto; align-items:center; gap:10px; padding:8px 14px; }
-    .carta-suit-panel > span:first-child { display:none; }
-    .carta-suit-emblem { width:38px; height:38px; }
+    .carta-suit-panel { grid-template-columns:auto auto; justify-items:start; align-items:center; column-gap:8px; row-gap:0; padding:6px 10px; border-radius:12px; }
+    .carta-suit-card { width:24px; grid-row:span 2; border-width:1.5px; } .carta-suit-panel b { font-size:13px; } .carta-suit-panel small { font-size:11px; }
     .carta-hand { --w:clamp(62px,18vw,82px); padding-inline:4px; }
     .carta-chip .carta-avatar { width:34px; height:34px; font-size:15px; }
     .carta-oval { padding:12px 6px; }
     .carta-center { gap:6px; padding:4px; }
     .carta-pile { width:58px; }
     .carta-pile-label b { font-size:12px; } .carta-pile-label span { font-size:11px; }
-    .carta-suit-panel { padding:6px 12px; }
+    .carta-suit-panel { padding:5px 9px; }
     .carta-turn { font-size:13px; }
     /* Your hand stays pinned to the bottom of the screen while the table scrolls. */
     .carta-stage .carta-seat-me { position:sticky; bottom:0; z-index:6; padding-bottom:6px; background:linear-gradient(180deg,transparent,rgba(6,14,24,.94) 34%); }
@@ -272,3 +270,29 @@
 
 /* Arabic: the table is a physical layout (seat positions, card overlap), so it keeps LTR geometry; text inside still reads RTL. */
 [dir="rtl"] .carta-hand,[dir="rtl"] .carta-fan,[dir="rtl"] .carta-hero-cards { direction:ltr; }
+
+/* Cards in flight between the piles and the seats (see cartaMotion.js) */
+.carta-flyer { position:fixed; z-index:70; height:auto; aspect-ratio:2/3; object-fit:contain; border-radius:8px; pointer-events:none; filter:drop-shadow(0 14px 18px #000a); will-change:transform; }
+
+/* End of match: the popup speaks to the viewer's own result */
+.carta-end { position:relative; overflow:hidden; padding-top:30px; animation:carta-end-in .5s cubic-bezier(.2,.9,.3,1.25); }
+.carta-end-badge { justify-self:center; display:grid; place-items:center; width:84px; height:84px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#f7d677,#c38b1c); color:#3a2503; box-shadow:0 0 0 6px #e2b13c33, 0 0 40px #e2b13c88; animation:carta-badge 2.4s ease-in-out infinite; }
+.carta-end-badge svg { width:40px; height:40px; }
+.carta-end .carta-eyebrow { font-size:13px; letter-spacing:4px; }
+.carta-end.outcome-win h2 { color:var(--c-gold); }
+.carta-end.outcome-lose { border-color:#e0574a; }
+.carta-end.outcome-lose .carta-end-badge { background:radial-gradient(circle at 35% 30%,#f08a7e,#a8352a); color:#2b0905; box-shadow:0 0 0 6px #e0574a33, 0 0 40px #e0574a77; animation:none; }
+.carta-end.outcome-lose .carta-eyebrow { color:#ff8a7d; }
+.carta-end.outcome-place .carta-end-badge { background:radial-gradient(circle at 35% 30%,#e3e9f2,#8796ab); color:#1b2433; box-shadow:0 0 0 6px #c7d2e233, 0 0 30px #c7d2e255; }
+.carta-confetti { position:absolute; inset:0; pointer-events:none; }
+.carta-end > :not(.carta-confetti) { position:relative; z-index:1; }
+.carta-confetti i { position:absolute; top:-12px; left:calc(var(--i) * 5.4%); width:8px; height:14px; border-radius:2px; background:hsl(calc(var(--i) * 47), 85%, 62%); animation:carta-confetti 2.6s calc(var(--i) * -.17s) linear infinite; }
+@keyframes carta-end-in { from { opacity:0; transform:translateY(24px) scale(.9); } }
+@keyframes carta-badge { 50% { transform:scale(1.07) rotate(-4deg); } }
+@keyframes carta-confetti { to { transform:translateY(560px) rotate(720deg); } }
+@media (prefers-reduced-motion: reduce) { .carta-end,.carta-end-badge,.carta-confetti i { animation:none; } .carta-confetti { display:none; } }
+
+/* The face-up card is the one everyone reads, so it is larger than the draw pile and carries no caption. */
+.carta-pile.discard { width:clamp(88px,7.6vw,120px); align-self:center; }
+@media (max-width:900px) { .carta-shell .carta-pile.discard { width:100px; } }
+@media (max-width:560px) { .carta-shell .carta-pile.discard { width:84px; } }

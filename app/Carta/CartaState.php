@@ -43,7 +43,6 @@ final class CartaState
         public ?string $activeSuit = null,
         public string $pendingEffect = self::NONE,
         public int $pendingDraw = 0,
-        public ?string $drawnCard = null,
         public int $turnNumber = 0,
         public array $events = [],
     ) {}

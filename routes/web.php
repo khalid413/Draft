@@ -31,7 +31,7 @@ Route::middleware(SetLocale::class)->group(function () {
         Route::post('/', 'create')->block()->middleware('throttle:10,1');
         Route::post('/join', 'join')->block()->middleware('throttle:15,1');
         Route::get('/{room}', 'state')->block();
-        Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'leave', 'start', 'rematch', 'play', 'draw', 'accept', 'pass'])->block();
+        Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'leave', 'start', 'rematch', 'play', 'draw', 'accept'])->block();
     });
     Route::prefix('rooms')->middleware('throttle:rooms')->controller(RoomController::class)->group(function () {
         Route::post('/', 'create')->block()->middleware('throttle:10,1');

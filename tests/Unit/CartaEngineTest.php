@@ -131,17 +131,21 @@ class CartaEngineTest extends TestCase
         $this->assertConserved($state);
     }
 
-    public function test_seven_is_wild_needs_a_valid_suit_and_cannot_interrupt_a_penalty(): void
+    public function test_seven_follows_suit_or_number_then_changes_the_suit_and_cannot_interrupt_a_penalty(): void
     {
         $engine = $this->engine();
-        $state = $this->table([['clubs_7', 'swords_7', 'cups_4'], ['cups_10', 'coins_10', 'swords_12']], 'coins_5');
-        $this->rejects(fn () => $engine->play($state, 0, 'clubs_7'), 'Choose the next suit');
-        $this->rejects(fn () => $engine->play($state, 0, 'clubs_7', 'moon'), 'Choose the next suit');
-        $engine->play($state, 0, 'clubs_7', 'swords');
+        // A 7 is not wild: on coins_5 only the coins 7 (same suit) may be played, never clubs_7.
+        $state = $this->table([['clubs_7', 'coins_7', 'cups_4'], ['cups_10', 'clubs_10', 'swords_12', 'swords_7']], 'coins_5');
+        $this->assertSame(['coins_7'], $engine->legalCards($state, 0));
+        $this->rejects(fn () => $engine->play($state, 0, 'clubs_7', 'cups'), 'does not match');
+        $this->rejects(fn () => $engine->play($state, 0, 'coins_7'), 'Choose the next suit');
+        $this->rejects(fn () => $engine->play($state, 0, 'coins_7', 'moon'), 'Choose the next suit');
+        $engine->play($state, 0, 'coins_7', 'swords');
         $this->assertSame('swords', $state->activeSuit);
-        $this->assertSame(['swords_12'], $engine->legalCards($state, 1), 'The chosen suit, not the 7\'s printed suit, now matches.');
+        // The chosen suit, not the 7's printed suit, now matches; another 7 matches by number.
+        $this->assertEqualsCanonicalizing(['swords_12', 'swords_7'], $engine->legalCards($state, 1));
         $engine->play($state, 1, 'swords_12');
-        $this->assertContains('swords_7', $engine->legalCards($state, 0));
+        $this->assertSame([], $engine->legalCards($state, 0), 'clubs_7 matches neither swords nor 12.');
 
         $pending = $this->table([['coins_2', 'cups_4'], ['clubs_7', 'swords_2']], 'coins_5');
         $engine->play($pending, 0, 'coins_2');
@@ -168,28 +172,27 @@ class CartaEngineTest extends TestCase
         $this->assertConserved($state);
     }
 
-    public function test_drawing_is_only_allowed_without_a_playable_card_and_a_playable_draw_may_be_played_or_passed(): void
+    public function test_drawing_is_allowed_any_time_and_always_ends_the_turn(): void
     {
         $engine = $this->engine();
-        $state = $this->table([['coins_3', 'swords_4'], ['cups_6', 'cups_12']], 'coins_5', draw: ['clubs_4', 'coins_11']);
-        $this->rejects(fn () => $engine->draw($state, 0), 'playable card');
-        $engine->play($state, 0, 'coins_3');
+        $state = $this->table([['coins_3', 'swords_4'], ['cups_6', 'cups_12'], ['clubs_6', 'clubs_12']], 'coins_5', draw: ['clubs_4', 'swords_11', 'coins_11']);
 
-        // Seat 1 has nothing for coins/3: draws coins_11 (last in pile) which is playable.
-        $engine->draw($state, 1);
-        $this->assertSame('coins_11', $state->drawnCard);
-        $this->assertSame(1, $state->currentSeat);
-        $this->assertSame(['coins_11'], $engine->legalCards($state, 1));
-        $this->rejects(fn () => $engine->play($state, 1, 'cups_6'), 'only play the card you drew');
-        $this->rejects(fn () => $engine->draw($state, 1), 'already drew');
-        $engine->pass($state, 1);
-        $this->assertSame([0, null], [$state->currentSeat, $state->drawnCard]);
-        $this->rejects(fn () => $engine->pass($state, 0), 'only pass after drawing');
-
-        // Seat 0 cannot match coins/3 with swords_4 and draws clubs_4, which does not match either, so the turn ends.
+        // Seat 0 may draw while holding a playable card (coins_3), and draws a playable one too: the turn still ends.
         $engine->draw($state, 0);
-        $this->assertSame([1, null], [$state->currentSeat, $state->drawnCard]);
-        $this->assertContains('clubs_4', $state->players[0]['hand']);
+        $this->assertSame(1, $state->currentSeat);
+        $this->assertSame(['coins_3', 'swords_4', 'coins_11'], $state->players[0]['hand']);
+        $this->assertSame([], $engine->legalCards($state, 0), 'No more plays once the turn has moved on.');
+        $this->rejects(fn () => $engine->play($state, 0, 'coins_11'), 'not your turn');
+
+        // Seats 1 and 2 have nothing for coins/5: each draws one card and the turn moves on.
+        $engine->draw($state, 1);
+        $engine->draw($state, 2);
+        $this->assertSame([0, 3, 3], [$state->currentSeat, count($state->players[1]['hand']), count($state->players[2]['hand'])]);
+
+        // A waiting penalty must be answered or accepted, never drawn around.
+        $state->pendingEffect = CartaState::DRAW_TWO;
+        $state->pendingDraw = 2;
+        $this->rejects(fn () => $engine->draw($state, 0), 'Answer the special card');
         $this->assertConserved($state);
     }
 
@@ -227,10 +230,10 @@ class CartaEngineTest extends TestCase
         $this->assertSame([CartaState::NONE, 0, 1], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
         $this->assertCount(2, $state->players[1]['hand'], 'The next player draws nothing.');
 
-        $seven = $this->table([['clubs_7'], ['cups_4', 'clubs_5'], ['coins_10', 'clubs_11']], 'coins_5');
-        $engine->play($seven, 0, 'clubs_7');
-        $this->assertSame('clubs', $seven->activeSuit, 'A final 7 needs no suit and keeps its printed suit.');
-        $this->assertSame(['clubs_5'], $engine->legalCards($seven, 1));
+        $seven = $this->table([['coins_7'], ['cups_4', 'coins_6'], ['coins_10', 'clubs_11']], 'coins_5');
+        $engine->play($seven, 0, 'coins_7');
+        $this->assertSame('coins', $seven->activeSuit, 'A final 7 needs no suit and keeps its printed suit.');
+        $this->assertSame(['coins_6'], $engine->legalCards($seven, 1));
     }
 
     public function test_finishing_while_answering_a_chain_cancels_the_chain(): void
@@ -247,7 +250,7 @@ class CartaEngineTest extends TestCase
     public function test_ranks_are_unique_and_the_last_active_player_is_the_loser(): void
     {
         $engine = $this->engine();
-        $state = $this->table([['coins_3', 'cups_7'], ['coins_6'], ['coins_10'], ['cups_11', 'clubs_12']], 'coins_5', current: 1, draw: ['swords_12', 'swords_11']);
+        $state = $this->table([['coins_3', 'coins_7'], ['coins_6'], ['coins_10'], ['cups_11', 'clubs_12']], 'coins_5', current: 1, draw: ['swords_12', 'swords_11']);
         $engine->play($state, 1, 'coins_6');       // B finishes 1st
         $engine->play($state, 2, 'coins_10');      // C finishes 2nd
         $this->assertSame(CartaState::PLAYING, $state->status);
@@ -255,7 +258,7 @@ class CartaEngineTest extends TestCase
         $engine->play($state, 0, 'coins_3');
         $this->assertSame(3, $state->currentSeat, 'Only A and D rotate now.');
         $engine->draw($state, 3);                  // swords_12 does not match coins/3 either
-        $engine->play($state, 0, 'cups_7');        // A finishes 3rd with a 7 (no suit needed); D is left holding cards
+        $engine->play($state, 0, 'coins_7');       // A finishes 3rd with a 7 (no suit needed); D is left holding cards
         $this->assertSame(CartaState::FINISHED, $state->status);
         $this->assertSame([2 => 1, 3 => 2, 1 => 3, 4 => 4], [2 => $state->players[1]['rank'], 3 => $state->players[2]['rank'], 1 => $state->players[0]['rank'], 4 => $state->players[3]['rank']]);
         $this->assertSame(CartaState::LOSER, $state->players[3]['status']);

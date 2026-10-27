@@ -14,7 +14,7 @@ class CartaGame extends Model
     protected $guarded = [];
 
     // Hidden information never leaves through serialization by accident.
-    protected $hidden = ['draw_pile', 'discard_pile', 'drawn_card'];
+    protected $hidden = ['draw_pile', 'discard_pile'];
 
     protected function casts(): array
     {
