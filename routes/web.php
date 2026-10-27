@@ -8,6 +8,7 @@ use App\Http\Controllers\GameController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SongController;
+use App\Http\Controllers\UnoController;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +34,14 @@ Route::middleware(SetLocale::class)->group(function () {
         Route::get('/{room}', 'state')->block();
         Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'leave', 'start', 'rematch', 'play', 'draw', 'accept'])->block();
     });
+    Route::get('/uno', [UnoController::class, 'variants'])->name('uno');
+    Route::prefix('uno/rooms')->middleware('throttle:rooms')->controller(UnoController::class)->group(function () {
+        Route::post('/', 'create')->block()->middleware('throttle:10,1');
+        Route::post('/join', 'join')->block()->middleware('throttle:15,1');
+        Route::get('/{room}', 'state')->block();
+        Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'settings', 'leave', 'start', 'rematch', 'play', 'draw', 'pass', 'accept', 'challenge', 'uno', 'catch'])->block();
+    });
+    Route::get('/uno/{variant}', [UnoController::class, 'page'])->where('variant', '[a-z-]+')->name('uno.play');
     Route::prefix('rooms')->middleware('throttle:rooms')->controller(RoomController::class)->group(function () {
         Route::post('/', 'create')->block()->middleware('throttle:10,1');
         Route::post('/join', 'join')->block()->middleware('throttle:15,1');

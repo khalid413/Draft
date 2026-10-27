@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 /** Glisa's front page: the library of games, plus one box that routes any table code to its game. */
 class LibraryController extends Controller
 {
-    private const GAME_PATHS = ['draft' => '/draft', 'carta' => '/carta'];
+    private const GAME_PATHS = ['draft' => '/draft', 'carta' => '/carta', 'uno' => '/uno'];
 
     public function index(Request $request)
     {
@@ -36,7 +36,9 @@ class LibraryController extends Controller
         $code = $request->validate(['code' => 'required|string|size:8|alpha_num:ascii'])['code'];
         $room = Room::where('code', $code)->first();
         abort_if(! $room || $room->isClosed() || ! isset(self::GAME_PATHS[$room->game_type]), 404, __('No open table uses that code.'));
+        // UNO tables open the page of their own variant.
+        $path = $room->game_type === 'uno' ? '/uno/'.($room->settings['variant'] ?? 'classic') : self::GAME_PATHS[$room->game_type];
 
-        return response()->json(['url' => self::GAME_PATHS[$room->game_type].'?join='.$code]);
+        return response()->json(['url' => $path.'?join='.$code]);
     }
 }

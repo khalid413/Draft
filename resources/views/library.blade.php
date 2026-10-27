@@ -19,6 +19,15 @@
 
         <section class="glisa-library" aria-labelledby="glisa-games">
             <h2 id="glisa-games" class="glisa-section-title">{{ __('Games') }}</h2>
+            <a href="/uno" class="glisa-uno">
+                <div class="glisa-uno-copy">
+                    <h3 class="uno-logo" aria-label="UNO"><span aria-hidden="true">UNO</span></h3>
+                    <p>{{ __('The card game everyone knows. Match colours and numbers, hit them with +2 and +4, and never forget to shout UNO.') }}</p>
+                    <ul class="glisa-tags"><li><i data-icon="people"></i> {{ __('2–6 players') }}</li><li>{{ __('Online rooms') }}</li><li>{{ __('Live ranking') }}</li></ul>
+                    <span class="glisa-play">{{ __('Choose an UNO version') }} <i data-icon="arrow-right"></i></span>
+                </div>
+                <div class="glisa-uno-cards" aria-hidden="true"><img src="/cards/uno/classic/red_7.png" alt=""><img src="/cards/uno/classic/yellow_reverse_1.png" alt=""><img src="/cards/uno/classic/green_draw2_1.png" alt=""><img src="/cards/uno/classic/wild4_1.png" alt=""></div>
+            </a>
             <div class="glisa-games">
                 <a href="/draft" class="glisa-game draft">
                     <div class="glisa-game-art" aria-hidden="true"><span class="draft-mystery">?</span><span class="draft-reveal">✦</span></div>

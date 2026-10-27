@@ -1,6 +1,7 @@
 @import 'notyf/notyf.min.css';
 @import './carta.css';
 @import './glisa.css';
+@import './uno.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -11,6 +11,7 @@
         var(--c-cobalt);
 }
 .carta-shell [x-cloak] { display:none !important; }
+.carta-shell { overflow-x:clip; } /* the tilted outer cards of a full hand must never scroll the page sideways */
 .carta-shell button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
 .carta-shell button:disabled { cursor:default; }
 .carta-shell :focus-visible { outline:3px solid var(--c-gold); outline-offset:3px; }
@@ -53,6 +54,7 @@
 .carta-hero-cards img:nth-child(2) { left:90px; top:0; transform:rotate(-2deg); z-index:1; }
 .carta-hero-cards img:nth-child(3) { left:180px; top:22px; transform:rotate(10deg); }
 .carta-forms { display:grid; gap:18px; }
+@media (max-width:760px) { .carta-home { grid-template-columns:minmax(0,1fr); } .carta-hero-cards { height:170px; } }
 .carta-panel { display:grid; gap:14px; padding:22px; border-radius:18px; background:var(--c-panel); border:1px solid var(--c-line); box-shadow:0 18px 50px #0008, inset 0 1px 0 #ffffff10; }
 .carta-panel h2 { font:700 20px 'Space Grotesk',sans-serif; color:var(--c-cream); }
 .carta-panel label,.carta-panel legend { display:grid; gap:8px; font-size:13px; color:#d8cfbd; }
@@ -178,7 +180,7 @@
 /* Cards overlap just enough to fit the width: more cards, tighter fan. No scrolling. */
 .carta-hand { --w:clamp(64px,5.6vw,88px); --n:5; display:flex; justify-content:center; align-items:flex-end; width:100%; padding:14px 12px 6px; }
 .carta-card { flex:0 0 auto; width:var(--w); margin-left:calc(-1 * max(var(--w) * .26, (var(--n) * var(--w) - 100%) / (var(--n) - .999))); border-radius:10px; transform-origin:50% 130%; transform:translateY(var(--lift)) rotate(var(--rot)); transition:transform .18s,filter .2s; animation:carta-deal .35s ease-out; }
-.carta-card:first-child { margin-left:0; }
+.carta-card:first-of-type { margin-left:0; } /* first-of-type: Alpine's <template> is the hand's first child */
 .carta-card img { display:block; width:100%; height:auto; border-radius:10px; filter:drop-shadow(0 8px 12px #000a); pointer-events:none; }
 .carta-shell .carta-hand .carta-card:disabled { opacity:1; } /* beats the global faded disabled-button rule */
 .carta-seat-me.turn .carta-card:not(.playable) { filter:brightness(.6) saturate(.7); }

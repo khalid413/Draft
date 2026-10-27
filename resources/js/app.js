@@ -2,6 +2,7 @@ import './i18n'; // first: defines window.t for Alpine expressions
 import Alpine from 'alpinejs';
 import draftDuel from './draftDuel';
 import carta from './carta';
+import uno from './uno';
 import { gameClient } from './gameClient';
 import { reducedMotion } from './animations';
 import { renderIcons } from './icons';
@@ -9,6 +10,7 @@ import { renderIcons } from './icons';
 window.Alpine = Alpine;
 Alpine.data('draftDuel', draftDuel);
 Alpine.data('carta', carta);
+Alpine.data('uno', uno);
 // Library join box: a table code opens whichever game it belongs to.
 Alpine.data('library', () => ({
     code: '', error: '', busy: false,

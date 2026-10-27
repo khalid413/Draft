@@ -55,6 +55,12 @@ export const gameClient = {
         room: id => request(`/carta/rooms/${id}`),
         action: (id, action, version, payload = {}) => request(`/carta/rooms/${id}/${action}`, { ...payload, version }),
     },
+    uno: {
+        create: (name, capacity, variant, stacking) => request('/uno/rooms', { name, capacity, variant, stacking }),
+        join: (code, name) => request('/uno/rooms/join', { code, name }),
+        room: id => request(`/uno/rooms/${id}`),
+        action: (id, action, version, payload = {}) => request(`/uno/rooms/${id}/${action}`, { ...payload, version }),
+    },
     state: () => request('/game/state'),
     start: (settings, replace = false) => request('/game/start', { ...settings, replace }),
     action: (action, version, payload = {}) => request(`/game/${action}`, { ...payload, version }),
