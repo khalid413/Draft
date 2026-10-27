@@ -24,7 +24,7 @@ final class GameEngine
     private function requirePhase(GameState $state, GamePhase $phase): void
     {
         if ($state->phase !== $phase) {
-            throw new DomainException('That action is not available in this phase.');
+            throw new DomainException(__('That action is not available in this phase.'));
         }
     }
 
@@ -33,7 +33,7 @@ final class GameEngine
         $domain = $this->domains->get($domainKey);
         $catalog = trim($catalog ?? '') ?: null;
         if ($catalog !== null && (! $domain instanceof CustomDomain || mb_strlen($catalog) > 60)) {
-            throw new DomainException('Choose a valid character collection.');
+            throw new DomainException(__('Choose a valid character collection.'));
         }
         if ($domain instanceof CustomDomain) {
             $domain = $domain->forCatalog($catalog);
@@ -45,11 +45,11 @@ final class GameEngine
         $names = array_map('trim', $names);
         if (count($names) < 2 || count($names) > 4 || count(array_unique(array_map('mb_strtolower', $names))) !== count($names)
             || (! $formation && ! in_array($rounds, [3, 5, 7], true))) {
-            throw new DomainException('Use distinct player names and 3, 5 or 7 rounds.');
+            throw new DomainException(__('Use distinct player names and 3, 5 or 7 rounds.'));
         }
         foreach ($names as $name) {
             if (mb_strlen($name) < 2 || mb_strlen($name) > 20) {
-                throw new DomainException('Player names must contain 2–20 characters.');
+                throw new DomainException(__('Player names must contain 2–20 characters.'));
             }
         }
 
@@ -63,11 +63,11 @@ final class GameEngine
                 : $domain->drawPair(array_column($deck, 'id'));
             if (count($pair) !== $turn['count'] || count(array_unique(array_map(fn ($c) => $c->id, $pair))) !== count($pair)
                 || array_intersect(array_column($deck, 'id'), array_map(fn ($c) => $c->id, $pair))) {
-                throw new DomainException('Domain supplied an invalid pair.');
+                throw new DomainException(__('Domain supplied an invalid pair.'));
             }
             foreach ($pair as $card) {
                 if ($formation && $card->position !== $formation[$round]['position']) {
-                    throw new DomainException('Domain supplied a player in the wrong position.');
+                    throw new DomainException(__('Domain supplied a player in the wrong position.'));
                 }
                 $deck[] = array_replace($card->snapshot(), ['power' => $domain->powerOf($card)],
                     $formation ? ['slot' => $formation[$round]['key']] : []);
@@ -82,7 +82,7 @@ final class GameEngine
     {
         $this->requirePhase($state, GamePhase::PassDevice);
         if ($state->currentRound >= $state->roundLimit) {
-            throw new DomainException('All rounds have been played.');
+            throw new DomainException(__('All rounds have been played.'));
         }
         $exclude = [];
         foreach ($state->rounds as $round) {
@@ -96,7 +96,7 @@ final class GameEngine
             ? array_map(fn ($card) => new Card($card), array_slice($state->deck, $turn['offset'], $turn['count']))
             : $domain->drawPair($exclude); // Resume games created before deck snapshots were added.
         if (count($pair) !== $turn['count'] || $pair[0]->id === $pair[1]->id || array_intersect($exclude, [$pair[0]->id, $pair[1]->id])) {
-            throw new DomainException('Domain supplied an invalid pair.');
+            throw new DomainException(__('Domain supplied an invalid pair.'));
         }
         $cards = $state->deck ? array_slice($state->deck, $turn['offset'], $turn['count']) : array_map(function (Card $card) use ($domain) {
             return array_replace($card->snapshot(), ['power' => $domain->powerOf($card)]);
@@ -117,11 +117,11 @@ final class GameEngine
         $this->requirePhase($state, GamePhase::Picking);
         $round = &$state->rounds[$state->currentRound];
         if ($round['activePlayer'] !== $playerIndex || $round['pickedSlot'] !== null) {
-            throw new DomainException('Only the active player may pick, once per round.');
+            throw new DomainException(__('Only the active player may pick, once per round.'));
         }
         $slot = array_search($cardId, $round['tokens'], true);
         if ($slot === false) {
-            throw new DomainException('Select a card from this round.');
+            throw new DomainException(__('Select a card from this round.'));
         }
         if ($state->pickDeadline !== null && $this->now() >= $state->pickDeadline) {
             return $this->timeout($state);
@@ -134,7 +134,7 @@ final class GameEngine
     {
         $this->requirePhase($state, GamePhase::Picking);
         if ($state->pickDeadline === null || $this->now() < $state->pickDeadline) {
-            throw new DomainException('The pick timer has not expired.');
+            throw new DomainException(__('The pick timer has not expired.'));
         }
 
         return $this->autoPick($state);
@@ -152,7 +152,7 @@ final class GameEngine
     {
         $round = &$state->rounds[$state->currentRound];
         if ($round['pickedSlot'] !== null) {
-            throw new DomainException('A pick is already locked in.');
+            throw new DomainException(__('A pick is already locked in.'));
         }
         $round['pickedSlot'] = $slot;
         $state->picks[] = ['round' => $state->currentRound, 'playerIndex' => $round['activePlayer'], 'cardId' => $round['cards'][$slot]['id']];
@@ -166,7 +166,7 @@ final class GameEngine
         $this->requirePhase($state, GamePhase::Picking);
         $round = &$state->rounds[$state->currentRound];
         if ($round['pickedSlot'] === null) {
-            throw new DomainException('Lock a pick before revealing.');
+            throw new DomainException(__('Lock a pick before revealing.'));
         }
         foreach ([$round['activePlayer'] => $round['pickedSlot'], $round['recipientPlayer'] => 1 - $round['pickedSlot']] as $player => $slot) {
             $state->players[$player]['cards'][] = $round['cards'][$slot];
@@ -185,7 +185,7 @@ final class GameEngine
     {
         $this->requirePhase($state, GamePhase::Revealing);
         if ($state->currentRound + 1 >= $state->roundLimit) {
-            throw new DomainException('Finish the game to see the results.');
+            throw new DomainException(__('Finish the game to see the results.'));
         }
         $state->currentRound++;
         $state->startingPlayerIndex = $state->schedule[$state->currentRound]['activePlayer'] ?? $state->currentRound % count($state->players);
@@ -198,7 +198,7 @@ final class GameEngine
     {
         $this->requirePhase($state, GamePhase::Revealing);
         if ($state->currentRound + 1 !== $state->roundLimit) {
-            throw new DomainException('Play every round before finishing.');
+            throw new DomainException(__('Play every round before finishing.'));
         }
         $domain = $this->domains->get($state->domainKey);
         $scores = [];
@@ -207,7 +207,7 @@ final class GameEngine
                 $slots = array_column($player['cards'], 'slot');
                 if (count($slots) !== count($state->formation) || count(array_unique($slots)) !== count($slots)
                     || array_diff(array_column($state->formation, 'key'), $slots)) {
-                    throw new DomainException('All teams must have a complete formation.');
+                    throw new DomainException(__('All teams must have a complete formation.'));
                 }
             }
             $cards = collect($player['cards'])->map(fn ($card) => new Card($card));

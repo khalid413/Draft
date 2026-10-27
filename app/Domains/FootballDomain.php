@@ -55,7 +55,7 @@ class FootballDomain implements CardPoolDomain, FormationDomainContract
     {
         $slot = $this->slots()[intdiv(count($excludeCardIds), 2)] ?? null;
         if (! $slot) {
-            throw new DomainException('All formation slots are filled.');
+            throw new DomainException(__('All formation slots are filled.'));
         }
 
         return $this->drawCards($excludeCardIds, 2, $slot['position']);
@@ -66,7 +66,7 @@ class FootballDomain implements CardPoolDomain, FormationDomainContract
         $cards = Card::where('domain', 'football')->where('position', $position)
             ->whereNotIn('id', $excludeCardIds)->inRandomOrder()->limit($count)->get();
         if ($cards->count() !== $count) {
-            throw new DomainException('Add more '.$position.' players before starting this draft.');
+            throw new DomainException(__('Add more :position players before starting this draft.', ['position' => $position]));
         }
 
         return $cards->all();

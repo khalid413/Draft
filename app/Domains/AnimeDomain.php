@@ -32,7 +32,7 @@ class AnimeDomain implements CardPoolDomain
     {
         $cards = Card::where('domain', $this->key())->whereNotIn('id', $excludeCardIds)->inRandomOrder()->limit($count)->get();
         if ($cards->count() !== $count) {
-            throw new DomainException('Not enough unique cards to continue. Seed the card catalog.');
+            throw new DomainException(__('Not enough unique cards to continue. Seed the card catalog.'));
         }
 
         return $cards->all();

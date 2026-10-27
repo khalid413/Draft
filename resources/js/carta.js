@@ -1,14 +1,15 @@
 import { gameClient } from './gameClient';
 import { renderIcons } from './icons';
+import { t, tn, ordinal, locale } from './i18n';
 
 const ROOM_KEY = 'carta-room-id';
+// English names are translation keys; the Darija names stay as a subtitle in every other language.
 const SUITS = {
     coins: { en: 'Coins', ar: 'ذهب' },
     swords: { en: 'Swords', ar: 'سيوف' },
     cups: { en: 'Cups', ar: 'طباق' },
     clubs: { en: 'Clubs', ar: 'زراوط' },
 };
-const ordinal = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
 // Where opponents sit around the oval, in clockwise turn order starting at your left.
 const SEATS = { 1: ['top'], 2: ['left', 'right'], 3: ['left', 'top', 'right'], 4: ['left', 'top-left', 'top-right', 'right'], 5: ['left', 'top-left', 'top', 'top-right', 'right'] };
 
@@ -32,22 +33,23 @@ export default () => ({
     get turnText() {
         const game = this.game;
         if (!game || game.status !== 'PLAYING') return '';
-        if (this.me?.status === 'FINISHED') return `You finished ${ordinal(this.me.rank)}. Watching ${this.currentName}.`;
-        if (!this.me?.isTurn) return `${this.currentName} is playing…`;
-        if (game.pending.effect === 'SKIP') return 'Skip! Answer with a 1, or accept losing your turn.';
-        if (game.pending.effect === 'DRAW_TWO') return `+${game.pending.draw} for you! Answer with a 2, or draw them.`;
-        if (this.me.canPass) return 'You drew a playable card. Play it or pass.';
-        if (this.me.canDraw) return 'No playable card. Draw one from the pile.';
-        return 'Your turn. Play a card of the same suit or number.';
+        if (this.me?.status === 'FINISHED') return t('You finished :rank. Watching :name.', { rank: ordinal(this.me.rank), name: this.currentName });
+        if (!this.me?.isTurn) return t(':name is playing…', { name: this.currentName });
+        if (game.pending.effect === 'SKIP') return t('Skip! Answer with a 1, or accept losing your turn.');
+        if (game.pending.effect === 'DRAW_TWO') return t('+:count for you! Answer with a 2, or draw them.', { count: game.pending.draw });
+        if (this.me.canPass) return t('You drew a playable card. Play it or pass.');
+        if (this.me.canDraw) return t('No playable card. Draw one from the pile.');
+        return t('Your turn. Play a card of the same suit or number.');
     },
     pendingText() {
         const pending = this.game?.pending;
         if (!pending || pending.effect === 'NONE') return '';
-        return pending.effect === 'SKIP' ? 'Skip pending' : `+${pending.draw} pending`;
+        return pending.effect === 'SKIP' ? t('Skip pending') : t('+:count pending', { count: pending.draw });
     },
-    suitName(suit) { return suit ? `${SUITS[suit].en} · ${SUITS[suit].ar}` : ''; },
-    cardLabel(card) { return `${card.rank} of ${SUITS[card.suit].en}`; },
-    ordinal,
+    suitTitle(suit) { return suit ? (locale === 'ar' ? SUITS[suit].ar : t(SUITS[suit].en)) : ''; },
+    suitSubtitle(suit) { return suit && locale !== 'ar' ? SUITS[suit].ar : ''; },
+    cardLabel(card) { return t(':rank of :suit', { rank: card.rank, suit: this.suitTitle(card.suit) }); },
+    ordinal, t, tn,
     backs(count) { return Array.from({ length: Math.min(count, 7) }, (_, i) => i); },
     seatPosition(index) { return (SEATS[this.opponents.length] || [])[index] || 'top'; },
     initial(name) { return (name || '?').trim().charAt(0).toUpperCase(); },
@@ -58,14 +60,14 @@ export default () => ({
     },
     get activeCount() { return (this.game?.players || []).filter(player => player.status === 'ACTIVE').length; },
     get statusTitle() {
-        if (this.game?.status === 'FINISHED') return 'Match over';
-        if (this.me?.status === 'FINISHED') return 'Spectating';
-        return this.me?.isTurn ? 'Your turn' : 'Round in progress';
+        if (this.game?.status === 'FINISHED') return t('Match over');
+        if (this.me?.status === 'FINISHED') return t('Spectating');
+        return this.me?.isTurn ? t('Your turn') : t('Round in progress');
     },
     rankTag(player) {
-        if (player.status === 'LOSER') return 'Loser';
-        if (player.status === 'FINISHED') return player.rank === 1 ? 'Winner · 1st' : ordinal(player.rank);
-        return player.isTurn ? 'Playing' : `${player.cards} card${player.cards === 1 ? '' : 's'}`;
+        if (player.status === 'LOSER') return t('Loser');
+        if (player.status === 'FINISHED') return player.rank === 1 ? t('Winner · :rank', { rank: ordinal(1) }) : ordinal(player.rank);
+        return player.isTurn ? t('Playing') : tn(':count card|:count cards', player.cards);
     },
 
     async init() {
@@ -108,13 +110,15 @@ export default () => ({
         const last = moves.length ? moves[moves.length - 1].id : null;
         if (this.seenMove !== null) {
             moves.filter(move => move.id > this.seenMove).forEach(move => {
-                const who = move.seat === this.room?.viewerIndex ? 'You' : move.name;
+                // Whole sentences per case: word order and agreement differ between English, French and Arabic.
+                const mine = move.seat === this.room?.viewerIndex, name = move.name, rank = ordinal(move.amount || 0);
                 const text = {
-                    finish: `${who} finished ${ordinal(move.amount)}${move.amount === 1 ? ' and won!' : '!'}`,
-                    lose: `${who} ${who === 'You' ? 'are' : 'is'} the last one holding cards.`,
-                    accept_draw: `${who} drew ${move.amount} penalty cards.`,
-                    accept_skip: `${who} ${who === 'You' ? 'were' : 'was'} skipped.`,
-                    reshuffle: 'The discard pile was reshuffled into the deck.',
+                    finish: move.amount === 1 ? (mine ? t('You finished :rank and won!', { rank }) : t(':name finished :rank and won!', { name, rank })) : (mine ? t('You finished :rank!', { rank }) : t(':name finished :rank!', { name, rank })),
+                    lose: mine ? t('You are the last one holding cards.') : t(':name is the last one holding cards.', { name }),
+                    accept_draw: mine ? tn('You drew :count penalty card.|You drew :count penalty cards.', move.amount) : tn(':name drew :count penalty card.|:name drew :count penalty cards.', move.amount, { name }),
+                    accept_skip: mine ? t('You were skipped.') : t(':name was skipped.', { name }),
+                    forfeit: mine ? '' : t(':name left the table and forfeits.', { name }),
+                    reshuffle: t('The discard pile was reshuffled into the deck.'),
                 }[move.type];
                 if (text) this.notify(text, move.type);
             });
@@ -171,6 +175,6 @@ export default () => ({
     async copy(kind) {
         const text = kind === 'link' ? `${location.origin}/carta?join=${this.room.code}` : this.room.code;
         try { await navigator.clipboard.writeText(text); this.copied = kind; setTimeout(() => { if (this.copied === kind) this.copied = ''; }, 2000); }
-        catch { this.error = 'Copy this ' + (kind === 'link' ? 'link: ' : 'code: ') + text; }
+        catch { this.error = (kind === 'link' ? t('Copy this link: :text', { text }) : t('Copy this code: :text', { text })); }
     },
 });

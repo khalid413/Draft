@@ -19,7 +19,7 @@ class DomainRegistry
     public function get(string $key): DomainContract
     {
         if (! ($this->enabled[$key] ?? false)) {
-            throw new DomainException('This domain is not available yet.');
+            throw new DomainException(__('This domain is not available yet.'));
         }
 
         return $this->domains[$key];

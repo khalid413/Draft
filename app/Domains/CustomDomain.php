@@ -41,7 +41,7 @@ class CustomDomain implements CardPoolDomain
             ->when($this->catalog !== null, fn ($query) => $query->where('series', $this->catalog))
             ->whereNotIn('id', $excludeCardIds)->inRandomOrder()->limit($count)->get();
         if ($cards->count() !== $count) {
-            throw new DomainException('Add more cards to your library before starting this game.');
+            throw new DomainException(__('Add more cards to your library before starting this game.'));
         }
 
         return $cards->all();

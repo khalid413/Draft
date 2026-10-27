@@ -49,7 +49,7 @@ return new class extends Migration
             $table->uuid('action_id')->nullable();                 // client retry key: one action applies once
             $table->unsignedInteger('turn_number');
             $table->unsignedTinyInteger('seat')->nullable();
-            $table->string('type', 16);                            // deal | play | draw | accept_skip | accept_draw | pass | finish | lose
+            $table->string('type', 16);                            // deal | play | draw | accept_skip | accept_draw | pass | finish | lose | forfeit
             $table->string('card', 12)->nullable();
             $table->string('suit', 8)->nullable();
             $table->unsignedTinyInteger('amount')->nullable();

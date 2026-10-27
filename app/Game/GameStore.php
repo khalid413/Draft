@@ -15,7 +15,7 @@ final class GameStore
         return DB::transaction(function () use ($uuid, $expectedVersion, $action) {
             $game = Game::whereKey($uuid)->lockForUpdate()->firstOrFail();
             if ($game->version !== $expectedVersion) {
-                throw new DomainException('The game has changed. Refreshing the current round.');
+                throw new DomainException(__('The game has changed. Refreshing the current round.'));
             }
             $state = $action(GameState::fromArray($game->state));
             $changed = Game::whereKey($uuid)->where('version', $expectedVersion)->update([
@@ -23,7 +23,7 @@ final class GameStore
                 'version' => $expectedVersion + 1, 'updated_at' => now(),
             ]);
             if ($changed !== 1) {
-                throw new DomainException('Another action already updated this game.');
+                throw new DomainException(__('Another action already updated this game.'));
             }
 
             return $game->refresh();

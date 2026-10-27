@@ -6,7 +6,7 @@ use App\Carta\Card;
 use App\Carta\CartaEngine;
 use App\Carta\CartaState;
 use DomainException;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 use Random\Engine\Mt19937;
 use Random\Randomizer;
 
@@ -274,5 +274,41 @@ class CartaEngineTest extends TestCase
             $this->assertCount(1, $losers);
             $this->assertSame($players, reset($losers)['rank']);
         }
+    }
+
+    public function test_when_the_only_opponent_leaves_the_remaining_player_wins(): void
+    {
+        $engine = $this->engine();
+        $state = $this->table([['coins_3', 'cups_4'], ['swords_5', 'clubs_6']], 'coins_2', current: 0);
+        $state->pendingEffect = CartaState::DRAW_TWO;
+        $state->pendingDraw = 2;
+        $engine->forfeit($state, 1);
+        $this->assertSame(CartaState::FINISHED, $state->status);
+        $this->assertSame([1, CartaState::DONE], [$state->players[0]['rank'], $state->players[0]['status']]);
+        $this->assertSame([2, CartaState::LOSER, []], [$state->players[1]['rank'], $state->players[1]['status'], $state->players[1]['hand']]);
+        $this->assertSame([null, CartaState::NONE], [$state->currentSeat, $state->pendingEffect]);
+        $this->assertConserved($state);
+    }
+
+    public function test_a_forfeit_ranks_last_and_the_match_goes_on_without_that_seat(): void
+    {
+        $engine = $this->engine();
+        // P1 leaves on their own turn with a +2 aimed at them: the penalty is dropped and play moves to P2.
+        $state = $this->table([['cups_3'], ['swords_5', 'clubs_6'], ['cups_4', 'coins_6']], 'cups_2', current: 1);
+        $state->pendingEffect = CartaState::DRAW_TWO;
+        $state->pendingDraw = 2;
+        $engine->forfeit($state, 1);
+        $this->assertSame(CartaState::PLAYING, $state->status);
+        $this->assertSame([3, CartaState::LOSER], [$state->players[1]['rank'], $state->players[1]['status']]);
+        $this->assertSame([2, CartaState::NONE], [$state->currentSeat, $state->pendingEffect]);
+        $this->assertConserved($state);
+
+        // P2 ends their turn on a legal card, then P0 empties their hand: 1st, and P2 is the loser in 2nd.
+        $engine->play($state, 2, 'cups_4');
+        $engine->play($state, 0, 'cups_3');
+        $this->assertSame(CartaState::FINISHED, $state->status);
+        $this->assertSame([1, 2, 3], [$state->players[0]['rank'], $state->players[2]['rank'], $state->players[1]['rank']]);
+        $this->assertSame(CartaState::LOSER, $state->players[2]['status']);
+        $this->assertConserved($state);
     }
 }

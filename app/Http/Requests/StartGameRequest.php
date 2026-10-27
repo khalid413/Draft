@@ -37,7 +37,7 @@ class StartGameRequest extends FormRequest
             if ($this->input('domain') === 'football') {
                 $missing = array_filter((new FootballDomain)->inventory($playerCount), fn ($item) => $item['missing'] > 0);
                 if ($missing) {
-                    $validator->errors()->add('domain', 'Add '.implode(', ', array_map(fn ($item) => $item['missing'].' '.$item['position'], $missing)).' to complete all 4-3-3 teams.');
+                    $validator->errors()->add('domain', __('Add :players to complete all 4-3-3 teams.', ['players' => implode(', ', array_map(fn ($item) => $item['missing'].' '.$item['position'], $missing))]));
                 }
             }
             if ($this->input('domain') === 'custom' && in_array($this->integer('rounds'), [3, 5, 7], true)) {
@@ -45,13 +45,13 @@ class StartGameRequest extends FormRequest
                 $catalog = is_string($this->input('catalog')) ? trim($this->input('catalog')) : '';
                 $count = Card::where('domain', 'custom')->when($catalog !== '', fn ($query) => $query->where('series', $catalog))->count();
                 if ($count < $required) {
-                    $validator->errors()->add('domain', 'Add '.($required - $count).' more cards to play '.$this->integer('rounds').' rounds ('.$required.' cards needed).');
+                    $validator->errors()->add('domain', __('Add :missing more cards to play :rounds rounds (:required cards needed).', ['missing' => $required - $count, 'rounds' => $this->integer('rounds'), 'required' => $required]));
                 }
             }
             $names = $this->input('players', []);
             if (count($names) === 2 && is_string($names[0] ?? null) && is_string($names[1] ?? null)
                 && mb_strtolower($names[0]) === mb_strtolower($names[1])) {
-                $validator->errors()->add('players', 'Choose different names for the two players.');
+                $validator->errors()->add('players', __('Choose different names for the two players.'));
             }
         }];
     }

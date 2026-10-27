@@ -68,3 +68,17 @@ a.glisa-game:hover .glisa-play svg { transform:translateX(4px); }
 @media (prefers-reduced-motion:reduce) {
     .glisa-shell * { transition:none !important; }
 }
+
+/* Language switcher (library header only) */
+.glisa-lang { display:flex; gap:4px; padding:4px; border-radius:12px; background:#05091199; border:1px solid #f6efe21f; }
+.glisa-lang button { min-height:38px; padding:0 14px; border-radius:9px; font-size:13px; font-weight:600; color:#d8cfbd; background:none; border:0; cursor:pointer; transition:background .2s,color .2s; }
+.glisa-lang button:hover { color:var(--c-cream); background:#ffffff0d; }
+.glisa-lang button.active { color:#2a1a02; background:var(--c-gold); }
+.glisa-lang button[lang="ar"] { font-family:Cairo,Inter,sans-serif; }
+.glisa-lang-short { display:none; }
+@media (max-width:560px) { .glisa-lang-full { display:none; } .glisa-lang-short { display:inline; } .glisa-lang button { padding:0 12px; } }
+
+/* Arabic: Cairo for text and headings, right-to-left layout */
+html[lang="ar"] body, html[lang="ar"] .glisa-shell, html[lang="ar"] .carta-shell { font-family:Cairo,Inter,sans-serif; }
+html[lang="ar"] :is(h1,h2,h3,.wordmark,.glisa-hero h1,.glisa-game h3,.glisa-join h2,.carta-hero h1,.carta-panel h2,.carta-lobby h1,.carta-results h2,.carta-hud h2) { font-family:Cairo,Inter,sans-serif; letter-spacing:0; }
+html[lang="ar"] :is(.glisa-eyebrow,.glisa-section-title,.carta-eyebrow,.eyebrow) { font-family:Cairo,Inter,sans-serif; letter-spacing:0; }

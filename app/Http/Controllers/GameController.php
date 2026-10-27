@@ -44,7 +44,7 @@ class GameController extends Controller
     {
         $existing = Game::find($request->session()->get('game_uuid', ''));
         if ($existing && $existing->status !== 'finished' && ! $request->boolean('replace')) {
-            throw new DomainException('Confirm abandoning the current game first.');
+            throw new DomainException(__('Confirm abandoning the current game first.'));
         }
         $state = $this->engine->startGame($request->validated('players'), $request->validated('domain'),
             $request->integer('rounds'), $request->boolean('timer'), $request->validated('catalog'));
@@ -83,7 +83,7 @@ class GameController extends Controller
         $changed = Game::whereKey($game->uuid)->where('version', $request->integer('version'))
             ->update(['status' => 'abandoned', 'version' => $request->integer('version') + 1]);
         if (! $changed) {
-            throw new DomainException('The game has changed. Refresh and try again.');
+            throw new DomainException(__('The game has changed. Refresh and try again.'));
         }
         $request->session()->forget('game_uuid');
 

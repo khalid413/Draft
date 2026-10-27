@@ -10,13 +10,13 @@ final class FootballMatchSimulator
     public function simulate(array $players, string $seed): array
     {
         if (count($players) !== 2) {
-            throw new DomainException('A football match needs two teams.');
+            throw new DomainException(__('A football match needs two teams.'));
         }
         $strengths = array_map(function ($player) {
             $average = function (array $positions) use ($player): float {
                 $cards = array_values(array_filter($player['cards'], fn ($card) => in_array($card['position'], $positions, true)));
                 if (! $cards) {
-                    throw new DomainException('The lineup is incomplete.');
+                    throw new DomainException(__('The lineup is incomplete.'));
                 }
 
                 return array_sum(array_column($cards, 'power')) / count($cards);

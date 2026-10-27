@@ -79,7 +79,7 @@ class CartaController extends Controller
                 return [$room, $index];
             }
             if ($room->version !== $request->integer('version')) {
-                throw new DomainException('The table changed. Please try again.');
+                throw new DomainException(__('The table changed. Please try again.'));
             }
             match ($action) {
                 'ready' => $this->lobby->setReady($room, $index, $request->boolean('ready')),
@@ -107,10 +107,10 @@ class CartaController extends Controller
     {
         abort_unless($index === $room->host, 403);
         if ($room->status !== 'lobby') {
-            throw new DomainException('This match has already started.');
+            throw new DomainException(__('This match has already started.'));
         }
         if (count($room->members) < 2 || in_array(false, array_column($room->members, 'ready'), true)) {
-            throw new DomainException('Wait for at least two players, all of them ready.');
+            throw new DomainException(__('Wait for at least two players, all of them ready.'));
         }
         $game = $this->store->create($room, $this->engine->start(array_column($room->members, 'name')));
         $room->game_uuid = $game->id;
@@ -120,7 +120,7 @@ class CartaController extends Controller
     private function move(Room $room, ?CartaGame $game, int $seat, string $action, Request $request): void
     {
         if ($room->status !== 'playing' || ! $game) {
-            throw new DomainException('This match is not running.');
+            throw new DomainException(__('This match is not running.'));
         }
         $state = $this->store->load($game);
         match ($action) {
@@ -129,7 +129,7 @@ class CartaController extends Controller
             'accept' => $this->engine->accept($state, $seat),
             'pass' => $this->engine->pass($state, $seat),
         };
-        $this->playDepartedSeats($room, $state);
+
         $this->store->save($game, $state, $request->input('actionId'));
         if ($state->status === CartaState::FINISHED) {
             $room->status = 'finished';
@@ -141,11 +141,11 @@ class CartaController extends Controller
         try {
             return Card::fromId((string) $card)->id();
         } catch (\InvalidArgumentException) {
-            throw new DomainException('Unknown card.');
+            throw new DomainException(__('Unknown card.'));
         }
     }
 
-    /** Leaving mid-match keeps the seat; the server plays it so the remaining players are never stuck. */
+    /** Leaving mid-match forfeits the seat; if only one player is left, they win. */
     private function leave(Room $room, int $index, ?CartaGame $game): void
     {
         $seatKept = $this->lobby->leave($room, $index);
@@ -158,20 +158,11 @@ class CartaController extends Controller
             return;
         }
         if ($seatKept) {
-            $state = $this->store->load($game);
-            $this->playDepartedSeats($room, $state);
+            $state = $this->engine->forfeit($this->store->load($game), $index);
             $this->store->save($game, $state);
             if ($state->status === CartaState::FINISHED) {
                 $room->status = 'finished';
             }
-        }
-    }
-
-    private function playDepartedSeats(Room $room, CartaState $state): void
-    {
-        // Bounded: every automatic turn either plays, draws or accepts, so a match always moves on.
-        for ($guard = 0; $guard < 5000 && $state->status === CartaState::PLAYING && ($room->members[$state->currentSeat]['left'] ?? false); $guard++) {
-            $this->engine->autoAct($state);
         }
     }
 }

@@ -41,16 +41,16 @@ class RoomLobby
         $token = bin2hex(random_bytes(32));
         [$room, $index, $existing] = DB::transaction(function () use ($request, $data, $token, $type) {
             $room = Room::where('code', $data['code'])->where('game_type', $type)->lockForUpdate()->firstOrFail();
-            abort_if($room->isClosed(), 410, 'This room is closed.');
+            abort_if($room->isClosed(), 410, __('This room is closed.'));
             if ($request->session()->has('room_tokens.'.$room->id)) {
                 return [$room, $this->access->index($request, $room), true];
             }
             if ($room->status !== 'lobby' || count($room->members) >= $room->settings['capacity']) {
-                throw new DomainException('This room has started or is full.');
+                throw new DomainException(__('This room has started or is full.'));
             }
             foreach ($room->members as $member) {
                 if (mb_strtolower($member['name']) === mb_strtolower($data['name'])) {
-                    throw new DomainException('That name is already taken in this room.');
+                    throw new DomainException(__('That name is already taken in this room.'));
                 }
             }
             $members = $room->members;
@@ -70,7 +70,7 @@ class RoomLobby
     public function setReady(Room $room, int $index, bool $ready): void
     {
         if ($room->status !== 'lobby') {
-            throw new DomainException('The game has already started.');
+            throw new DomainException(__('The game has already started.'));
         }
         $members = $room->members;
         $members[$index]['ready'] = $ready;
@@ -118,7 +118,7 @@ class RoomLobby
     public function rematch(Room $room): void
     {
         if ($room->status !== 'finished') {
-            throw new DomainException('Finish the game first.');
+            throw new DomainException(__('Finish the game first.'));
         }
         $seats = $room->activeSeats();
         $room->host = array_search($room->host, $seats, true);

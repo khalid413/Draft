@@ -1,5 +1,6 @@
+@php($locale = app()->getLocale())
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $locale }}" dir="{{ $locale === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,10 +8,12 @@
     <meta name="reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}">
     <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.client_port', 8080) }}">
     <meta name="theme-color" content="#0B0F1A">
-    <meta name="description" content="@yield('description', 'Glisa: Moroccan game nights with friends. Draft Duel, Moroccan Carta and more, online or on one device.')">
-    <title>@yield('title', 'Glisa — game nights with friends')</title>
+    <meta name="description" content="@yield('description', __('Glisa: Moroccan game nights with friends. Draft Duel, Moroccan Carta and more, online or on one device.'))">
+    <title>@yield('title', __('Glisa — game nights with friends'))</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|space-grotesk:400,500,600,700|jetbrains-mono:500,700" rel="stylesheet">
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|space-grotesk:400,500,600,700|jetbrains-mono:500,700{{ $locale === 'ar' ? '|cairo:400,600,700' : '' }}" rel="stylesheet">
+    {{-- Browser-side texts use the same translations as the server (keys are the English sentences). --}}
+    <script>window.GLISA_I18N = @json(['locale' => $locale, 'strings' => \App\Support\Translations::forBrowser($locale)]);</script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>

@@ -5,6 +5,7 @@ import { createCardActivation } from './cardActivation';
 import { sound, muteSounds, tiltCards, revealCards, flyCards, celebrate, enterPass, iconReveal } from './animations';
 import { Notyf } from 'notyf';
 import { renderIcons } from './icons';
+import { t, tn } from './i18n';
 
 const notify = new Notyf({ duration: 3500, position: { x: 'right', y: 'bottom' } });
 const drawIcons = () => renderIcons();
@@ -15,13 +16,13 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     get online() { return !!this.room; },
     get myTurn() { return !this.online || this.room.viewerIndex === this.game?.activePlayer; },
     get everyoneReady() { return Array.isArray(this.room?.members) && this.room.members.length === this.room.settings.capacity && this.room.members.every(member => member.ready); },
-    get lobbyChips() { const s = this.room?.settings; return s ? [s.domain === 'football' ? 'Football 4–3–3' : (s.catalog || 'All characters'), ...(s.domain === 'football' ? [] : [s.rounds + ' rounds']), s.capacity + ' players', s.timer ? '30s timer' : 'No timer'] : []; },
+    get lobbyChips() { const s = this.room?.settings; return s ? [s.domain === 'football' ? t('Football 4–3–3') : (s.catalog || t('All characters')), ...(s.domain === 'football' ? [] : [tn(':count round|:count rounds', s.rounds)]), tn(':count player|:count players', s.capacity), s.timer ? t('30s timer') : t('No timer')] : []; },
     get lobbyReadyCount() { return (this.room?.members || []).filter(member => member.ready).length; },
     get lobbyHint() {
         const capacity = this.room?.settings.capacity || 0, missing = capacity - (this.room?.members?.length || 0);
-        if (missing > 0) return `Waiting for ${missing} more player${missing === 1 ? '' : 's'}. Share the room code.`;
-        if (!this.everyoneReady) return `${this.lobbyReadyCount} of ${capacity} ready. Waiting for everyone to tap ready.`;
-        return this.room.isHost ? 'Everyone is ready. Start the draft!' : 'Everyone is ready. Waiting for the host to start.';
+        if (missing > 0) return tn('Waiting for :count more player. Share the room code.|Waiting for :count more players. Share the room code.', missing);
+        if (!this.everyoneReady) return t(':ready of :capacity ready. Waiting for everyone to tap ready.', { ready: this.lobbyReadyCount, capacity });
+        return this.room.isHost ? t('Everyone is ready. Start the draft!') : t('Everyone is ready. Waiting for the host to start.');
     },
     selectedMatchIndex: 0,
     get matches() { return this.game?.results?.league?.matches || (this.game?.results?.match ? [this.game.results.match] : []); },
@@ -30,7 +31,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     leaguePoints(index) { return this.game?.results?.league?.table.find(row => row.playerIndex === index)?.points || 0; },
     playerClass(index) { return ["player-one", "player-two", "player-three", "player-four"][index] || ""; },
     setPlayerCount(count) { this.settings.players = Array.from({ length: count }, (_, i) => this.settings.players[i] || ""); },
-    goalMoment: null, matchGoalLog: [], simulating: false, matchMinute: 0, matchGoals: [0, 0], matchEvent: null, matchCaption: 'Kick off', ballX: 50, ballY: 50, matchFrame: null,
+    goalMoment: null, matchGoalLog: [], simulating: false, matchMinute: 0, matchGoals: [0, 0], matchEvent: null, matchCaption: t('Kick off'), ballX: 50, ballY: 50, matchFrame: null,
     game: null, loading: true, busy: false, screen: 'home',
     error: '', selected: null, modal: null, returnFocus: null, muted: true, seconds: 30, offset: 0,
     cardActivation: createCardActivation(),
@@ -65,7 +66,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
     get cardsNeeded() { return Math.max(0, this.settings.rounds * this.settings.players.length - this.selectedCardCount); },
     get activeName() { return this.game?.players?.[this.game.activePlayer]?.name || ''; },
     get isDraw() { return (this.game?.results?.winners?.length || 0) > 1; },
-    get winnerText() { return this.isDraw ? (this.game.results.winners.map(i => this.game.players[i].name).join(' & ') + ' share the crown.') : `${this.game?.players?.[this.game?.results?.winners?.[0]]?.name || ''} takes the crown.`; },
+    get winnerText() { return this.isDraw ? t(':names share the crown.', { names: this.game.results.winners.map(i => this.game.players[i].name).join(' & ') }) : t(':name takes the crown.', { name: this.game?.players?.[this.game?.results?.winners?.[0]]?.name || '' }); },
     async init() {
         try { this.muted = localStorage.getItem('draft-duel-muted') !== 'false'; } catch {}
         muteSounds(this.muted);
@@ -225,7 +226,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
         if (!match) { this.simulating = false; return; }
         this.matchMinute = 0; this.matchGoals = [0, 0]; this.matchEvent = null;
         this.goalMoment = null; this.matchGoalLog = [];
-        this.matchCaption = this.matches.length > 1 ? 'Every point counts.' : 'Two teams. One final.'; this.ballX = 50; this.ballY = 50;
+        this.matchCaption = this.matches.length > 1 ? t('Every point counts.') : t('Two teams. One final.'); this.ballX = 50; this.ballY = 50;
         await this.$nextTick();
         const started = performance.now(); let cursor = 0, goalUntil = 0;
         const duration = 15000;
@@ -242,8 +243,8 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
                         const forwards = this.matchPlayers[event.team].cards.filter(card => ['LW', 'ST', 'RW'].includes(card.position));
                         this.goalMoment = { ...event, scorer: forwards[event.minute % forwards.length] };
                         this.matchGoalLog.push(event); goalUntil = now + 1000;
-                        this.matchCaption = this.matchPlayers[event.team].name + ' finds the net'; sound('reveal');
-                    } else if (now >= goalUntil) this.matchCaption = this.matchPlayers[1 - event.team].name + ' holds firm';
+                        this.matchCaption = t(':name finds the net', { name: this.matchPlayers[event.team].name }); sound('reveal');
+                    } else if (now >= goalUntil) this.matchCaption = t(':name holds firm', { name: this.matchPlayers[1 - event.team].name });
                 }
                 if (now >= goalUntil) this.goalMoment = null;
                 if (!reduced && progress > 0 && progress < 1) {
@@ -254,7 +255,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
                     this.ballX = 50 + direction * phase * 43;
                     this.ballY = 50 + Math.sin(phase * Math.PI * 2) * 17 * (1 - phase);
                 }
-                if (progress === 1) { this.goalMoment = null; this.matchCaption = 'The final whistle.'; this.matchGoals = [...match.goals]; }
+                if (progress === 1) { this.goalMoment = null; this.matchCaption = t('The final whistle.'); this.matchGoals = [...match.goals]; }
                 if (elapsed < duration) this.matchFrame = requestAnimationFrame(frame);
                 else { this.simulating = false; this.matchFrame = null; resolve(); }
             };
@@ -273,7 +274,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
         if (this.playStyle === 'online') return this.createRoom();
         if (this.online) this.disconnectRoom();
         if (new Set(this.settings.players.map(name => name.trim().toLowerCase())).size !== this.settings.players.length) {
-            this.error = 'Choose a different name for each player.'; return;
+            this.error = t('Choose a different name for each player.'); return;
         }
         if (this.game && this.game.phase !== 'finished') this.openModal('replace');
         else this.start();
@@ -285,7 +286,7 @@ export default (initialCardCount = 0, initialFootballInventory = [], initialCata
             const state = await gameClient.start(this.settings, replace);
             this.closeModal(); this.screen = 'arena'; this.selected = null;
             this.library = []; // Do not keep the catalog in the active-game UI.
-            await this.accept(state); notify.success('The arena is yours. Good luck!');
+            await this.accept(state); notify.success(t('The arena is yours. Good luck!'));
         } catch (error) { this.error = error.message; notify.error(error.message); }
         finally { this.busy = false; }
     },

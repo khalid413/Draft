@@ -93,9 +93,9 @@
 
 /* Table: an oval felt with the players seated around it, you at the bottom */
 .carta-shell .suit-coins { color:var(--suit-coins); } .carta-shell .suit-swords { color:var(--suit-swords); } .carta-shell .suit-cups { color:var(--suit-cups); } .carta-shell .suit-clubs { color:var(--suit-clubs); }
-.carta-main:has(.carta-stage) { max-width:1500px; padding-bottom:24px; }
-.carta-stage { position:relative; height:clamp(660px, calc(100vh - 110px), 900px); min-width:0; }
-.carta-oval { position:absolute; left:10%; right:10%; top:17%; bottom:24%; border-radius:50%; display:grid; place-items:center;
+.carta-main:has(.carta-stage) { max-width:1280px; padding-bottom:24px; }
+.carta-stage { position:relative; height:clamp(600px, calc(100vh - 120px), 800px); min-width:0; }
+.carta-oval { position:absolute; left:14%; right:14%; top:15%; bottom:35%; border-radius:50%; display:grid; place-items:center;
     background:radial-gradient(ellipse at 50% 45%,#1f8a5c 0%,#12663f 52%,#0a4128 100%);
     border:clamp(12px,1.6vw,20px) solid #5a3216; box-shadow:inset 0 0 0 3px #c99a3a, inset 0 0 0 9px #4a2810, inset 0 18px 60px #0008, 0 30px 70px #000b, 0 0 0 2px #2a1607; }
 .carta-oval::before { content:''; position:absolute; inset:9%; border-radius:50%; border:1.5px solid #e2b13c26; pointer-events:none; }
@@ -120,10 +120,10 @@
 .carta-hud-ranks li.lose, .carta-hud-ranks li.lose b { color:#ff8a7d; }
 
 /* Center of the felt */
-.carta-center { position:relative; z-index:2; display:grid; justify-items:center; gap:10px; padding:10px; }
+.carta-center { position:relative; z-index:2; display:grid; justify-items:center; gap:8px; padding:8px; }
 .carta-center-row { display:flex; align-items:flex-start; justify-content:center; gap:clamp(16px,3vw,40px); }
 .carta-pile-wrap { display:grid; justify-items:center; gap:10px; }
-.carta-pile { position:relative; width:clamp(78px,8.5vw,118px); aspect-ratio:2/3; }
+.carta-pile { position:relative; width:clamp(60px,5.4vw,84px); aspect-ratio:2/3; }
 .carta-pile img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; border-radius:8px; filter:drop-shadow(0 10px 14px #000a); }
 .carta-pile.draw .stack.s2 { transform:translate(2px,3px); } .carta-pile.draw .stack.s3 { transform:translate(4px,6px); }
 .carta-shell .carta-pile.draw:disabled { opacity:1; }
@@ -136,7 +136,7 @@
 .carta-pile-label span { font-size:12px; color:#d8cfbd; }
 .carta-suit-panel { display:grid; justify-items:center; gap:6px; align-self:center; padding:12px 16px; border-radius:14px; background:rgba(6,14,22,.86); border:1px solid #f6efe21a; }
 .carta-suit-panel > span:first-child { font-size:12px; color:#d8cfbd; }
-.carta-suit-emblem { width:58px; height:58px; border-radius:50%; background-size:280%; background-position:50% 46%; border:2.5px solid currentColor; box-shadow:0 0 18px color-mix(in srgb, currentColor 45%, transparent); }
+.carta-suit-emblem { width:48px; height:48px; border-radius:50%; background-size:280%; background-position:50% 46%; border:2.5px solid currentColor; box-shadow:0 0 18px color-mix(in srgb, currentColor 45%, transparent); }
 .carta-suit-panel b { color:var(--c-cream); font-size:15px; }
 .carta-suit-panel small { color:currentColor; font-size:12px; }
 .carta-pending { padding:6px 16px; border-radius:30px; font-weight:800; font-size:13px; background:#e2b13c; color:#2a1a02; animation:carta-pulse 1s ease-in-out infinite; }
@@ -145,14 +145,14 @@
 .carta-turn.mine { color:#fff3cf; }
 /* On the oval the turn line sits above the piles, clear of your fanned hand. */
 .carta-center .carta-pending { order:-2; } .carta-center .carta-turn { order:-1; }
-.carta-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.carta-actions { position:relative; z-index:3; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
 .carta-actions .carta-danger,.carta-actions .carta-secondary { min-height:42px; padding:0 18px; }
 
 /* Seats */
 .carta-seat { position:absolute; z-index:3; display:grid; justify-items:center; gap:10px; }
-.carta-seat.pos-top { left:50%; top:2%; transform:translateX(-50%); }
-.carta-seat.pos-top-left { left:27%; top:5%; transform:translateX(-50%); }
-.carta-seat.pos-top-right { left:73%; top:5%; transform:translateX(-50%); }
+.carta-seat.pos-top { left:50%; top:0; transform:translateX(-50%); }
+.carta-seat.pos-top-left { left:27%; top:3%; transform:translateX(-50%); }
+.carta-seat.pos-top-right { left:73%; top:3%; transform:translateX(-50%); }
 .carta-seat.pos-left { left:0; top:36%; }
 .carta-seat.pos-right { right:0; top:36%; }
 .carta-seat.pos-top .carta-fan,.carta-seat.pos-top-left .carta-fan,.carta-seat.pos-top-right .carta-fan { order:2; }
@@ -169,14 +169,14 @@
 .tone-0 { background:radial-gradient(circle at 35% 30%,#1fa77d,#0f6b4f) !important; } .tone-1 { background:radial-gradient(circle at 35% 30%,#d4564a,#8f2a21) !important; }
 .tone-2 { background:radial-gradient(circle at 35% 30%,#4f86c6,#1d4e89) !important; } .tone-3 { background:radial-gradient(circle at 35% 30%,#e2b13c,#9a6d12) !important; }
 .tone-4 { background:radial-gradient(circle at 35% 30%,#9b6fd0,#5b3a8f) !important; } .tone-5 { background:radial-gradient(circle at 35% 30%,#3fb6b0,#17706b) !important; }
-.carta-fan { position:relative; display:flex; justify-content:center; height:clamp(70px,7vw,100px); padding:0 26px; }
-.carta-fan img { width:clamp(46px,4.6vw,66px); height:auto; margin:0 calc(clamp(46px,4.6vw,66px) * -.32); border-radius:6px; transform-origin:50% 120%; transform:translateY(var(--lift)) rotate(var(--rot)); filter:drop-shadow(0 6px 10px #0009); }
+.carta-fan { position:relative; display:flex; justify-content:center; height:clamp(60px,6vw,84px); padding:0 26px; }
+.carta-fan img { width:clamp(40px,3.9vw,56px); height:auto; margin:0 calc(clamp(40px,3.9vw,56px) * -.32); border-radius:6px; transform-origin:50% 120%; transform:translateY(var(--lift)) rotate(var(--rot)); filter:drop-shadow(0 6px 10px #0009); }
 .carta-seat.pos-left .carta-fan { transform:rotate(-12deg); } .carta-seat.pos-right .carta-fan { transform:rotate(12deg); }
 
 /* Your hand */
-.carta-seat-me { position:absolute; z-index:4; left:50%; bottom:0; transform:translateX(-50%); width:min(760px, 72%); display:grid; justify-items:center; gap:4px; }
+.carta-seat-me { position:absolute; z-index:4; left:50%; bottom:0; transform:translateX(-50%); width:min(680px, 62%); display:grid; justify-items:center; gap:4px; }
 /* Cards overlap just enough to fit the width: more cards, tighter fan. No scrolling. */
-.carta-hand { --w:clamp(78px,7.4vw,112px); --n:5; display:flex; justify-content:center; align-items:flex-end; width:100%; padding:30px 12px 6px; }
+.carta-hand { --w:clamp(64px,5.6vw,88px); --n:5; display:flex; justify-content:center; align-items:flex-end; width:100%; padding:14px 12px 6px; }
 .carta-card { flex:0 0 auto; width:var(--w); margin-left:calc(-1 * max(var(--w) * .26, (var(--n) * var(--w) - 100%) / (var(--n) - .999))); border-radius:10px; transform-origin:50% 130%; transform:translateY(var(--lift)) rotate(var(--rot)); transition:transform .18s,filter .2s; animation:carta-deal .35s ease-out; }
 .carta-card:first-child { margin-left:0; }
 .carta-card img { display:block; width:100%; height:auto; border-radius:10px; filter:drop-shadow(0 8px 12px #000a); pointer-events:none; }
@@ -269,3 +269,6 @@
 @media (prefers-reduced-motion:reduce) {
     .carta-shell *,.carta-shell *::before { animation:none !important; transition:none !important; }
 }
+
+/* Arabic: the table is a physical layout (seat positions, card overlap), so it keeps LTR geometry; text inside still reads RTL. */
+[dir="rtl"] .carta-hand,[dir="rtl"] .carta-fan,[dir="rtl"] .carta-hero-cards { direction:ltr; }

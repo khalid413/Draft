@@ -184,17 +184,28 @@ class CartaRoomTest extends TestCase
         $this->assertSame($before, $this->peek($room, 1)['game']['hand']);
     }
 
-    public function test_a_player_who_leaves_mid_match_is_played_by_the_server(): void
+    public function test_a_player_who_leaves_mid_match_forfeits_and_the_rest_play_on(): void
     {
         $room = $this->table(3);
         $this->send($room, 2, 'leave')->assertOk();
         $room = $this->peek($room, 0);
         $this->assertTrue($room['members'][2]['left']);
+        $this->assertSame([CartaState::LOSER, 3, 0], [$room['game']['players'][2]['status'], $room['game']['players'][2]['rank'], $room['game']['players'][2]['cards']]);
         for ($turn = 0; $room['status'] === 'playing' && $turn < 3000; $turn++) {
             $this->assertNotSame(2, $room['game']['currentSeat'], 'The departed seat never waits for input.');
             $room = $this->takeTurn($room);
         }
         $this->assertSame('finished', $room['status']);
+    }
+
+    public function test_when_the_last_opponent_leaves_the_remaining_player_wins(): void
+    {
+        $room = $this->table(2);
+        $this->send($room, 1, 'leave')->assertOk();
+        $room = $this->peek($room, 0);
+        $this->assertSame(['finished', CartaState::FINISHED], [$room['status'], $room['game']['status']]);
+        $this->assertSame([0, 1, CartaState::DONE], [$room['game']['rankings'][0]['seat'], $room['game']['rankings'][0]['rank'], $room['game']['rankings'][0]['status']]);
+        $this->assertSame([1, 2, CartaState::LOSER], [$room['game']['rankings'][1]['seat'], $room['game']['rankings'][1]['rank'], $room['game']['rankings'][1]['status']]);
     }
 
     public function test_lobby_rules_rematch_and_separation_from_draft_rooms(): void

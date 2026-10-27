@@ -26,7 +26,7 @@ final class CartaEngine
     {
         $names = array_values($names);
         if (count($names) < 2 || count($names) > 6) {
-            throw new DomainException('Carta needs 2 to 6 players.');
+            throw new DomainException(__('Carta needs 2 to 6 players.'));
         }
         $pile = $this->random->shuffleArray(array_map(fn (Card $card) => $card->id(), Card::deck()));
         $players = array_map(fn ($name) => ['name' => $name, 'hand' => [], 'status' => CartaState::ACTIVE, 'rank' => null], $names);
@@ -72,21 +72,21 @@ final class CartaEngine
         $hand = $state->players[$seat]['hand'];
         $position = array_search($cardId, $hand, true);
         if ($position === false) {
-            throw new DomainException('That card is not in your hand.');
+            throw new DomainException(__('That card is not in your hand.'));
         }
         if ($state->drawnCard !== null && $cardId !== $state->drawnCard) {
-            throw new DomainException('After drawing you can only play the card you drew, or pass.');
+            throw new DomainException(__('After drawing you can only play the card you drew, or pass.'));
         }
         if (! $this->canPlay($state, $card)) {
             throw new DomainException(match ($state->pendingEffect) {
-                CartaState::SKIP => 'Answer the skip with a 1, or accept it.',
-                CartaState::DRAW_TWO => 'Answer with a 2, or draw the penalty cards.',
-                default => 'That card does not match the suit or number on the table.',
+                CartaState::SKIP => __('Answer the skip with a 1, or accept it.'),
+                CartaState::DRAW_TWO => __('Answer with a 2, or draw the penalty cards.'),
+                default => __('That card does not match the suit or number on the table.'),
             });
         }
         $finishing = count($hand) === 1;
         if ($card->rank === 7 && ! $finishing && ! Card::suitIsValid($suit)) {
-            throw new DomainException('Choose the next suit for your 7.');
+            throw new DomainException(__('Choose the next suit for your 7.'));
         }
 
         unset($hand[$position]);
@@ -124,13 +124,13 @@ final class CartaEngine
     {
         $this->assertTurn($state, $seat);
         if ($state->pendingEffect !== CartaState::NONE) {
-            throw new DomainException('Answer the special card or accept its penalty first.');
+            throw new DomainException(__('Answer the special card or accept its penalty first.'));
         }
         if ($state->drawnCard !== null) {
-            throw new DomainException('You already drew this turn.');
+            throw new DomainException(__('You already drew this turn.'));
         }
         if ($this->legalCards($state, $seat)) {
-            throw new DomainException('You have a playable card, so you cannot draw.');
+            throw new DomainException(__('You have a playable card, so you cannot draw.'));
         }
         $cards = $this->take($state, 1);
         $state->players[$seat]['hand'] = [...$state->players[$seat]['hand'], ...$cards];
@@ -150,7 +150,7 @@ final class CartaEngine
     {
         $this->assertTurn($state, $seat);
         if ($state->pendingEffect === CartaState::NONE) {
-            throw new DomainException('There is no penalty to accept.');
+            throw new DomainException(__('There is no penalty to accept.'));
         }
         if ($state->pendingEffect === CartaState::SKIP) {
             $state->events[] = ['type' => 'accept_skip', 'seat' => $seat];
@@ -172,7 +172,7 @@ final class CartaEngine
     {
         $this->assertTurn($state, $seat);
         if ($state->drawnCard === null) {
-            throw new DomainException('You can only pass after drawing a playable card.');
+            throw new DomainException(__('You can only pass after drawing a playable card.'));
         }
         $state->events[] = ['type' => 'pass', 'seat' => $seat];
         $this->advance($state, $seat);
@@ -180,7 +180,45 @@ final class CartaEngine
         return $state;
     }
 
-    /** Plays the current turn for a seat whose player left the room, so the match never stalls. */
+    /**
+     * A player who leaves mid-match forfeits: ranked last among those still playing, their cards return under the draw pile.
+     * Any penalty aimed at them is dropped. When one player remains, they finish next and the match ends.
+     */
+    public function forfeit(CartaState $state, int $seat): CartaState
+    {
+        if ($state->status !== CartaState::PLAYING || ! $state->isActive($seat)) {
+            return $state;
+        }
+        $forfeited = count(array_filter($state->players, fn ($player) => $player['status'] === CartaState::LOSER));
+        $state->drawPile = [...$state->players[$seat]['hand'], ...$state->drawPile];
+        $state->players[$seat]['hand'] = [];
+        $state->players[$seat]['status'] = CartaState::LOSER;
+        $state->players[$seat]['rank'] = count($state->players) - $forfeited;
+        $state->events[] = ['type' => 'forfeit', 'seat' => $seat, 'amount' => $state->players[$seat]['rank']];
+
+        $active = $state->activeSeats();
+        if (count($active) === 1) {
+            $winner = $active[0];
+            $rank = count(array_filter($state->players, fn ($player) => $player['status'] === CartaState::DONE)) + 1;
+            $state->players[$winner]['status'] = CartaState::DONE;
+            $state->players[$winner]['rank'] = $rank;
+            $state->events[] = ['type' => 'finish', 'seat' => $winner, 'amount' => $rank];
+            $state->status = CartaState::FINISHED;
+            $state->currentSeat = null;
+            $state->drawnCard = null;
+            $state->pendingEffect = CartaState::NONE;
+            $state->pendingDraw = 0;
+        } elseif ($state->currentSeat === $seat) {
+            $state->pendingEffect = CartaState::NONE;
+            $state->pendingDraw = 0;
+            $this->advance($state, $seat);
+        }
+        $this->assertConserved($state);
+
+        return $state;
+    }
+
+    /** Plays the current turn for whoever's turn it is; used to simulate whole matches. */
     public function autoAct(CartaState $state): CartaState
     {
         $seat = $state->currentSeat;
@@ -212,16 +250,16 @@ final class CartaEngine
     private function assertTurn(CartaState $state, int $seat): void
     {
         if ($state->status !== CartaState::PLAYING) {
-            throw new DomainException('This match is not running.');
+            throw new DomainException(__('This match is not running.'));
         }
         if (! isset($state->players[$seat])) {
-            throw new DomainException('You are not seated at this table.');
+            throw new DomainException(__('You are not seated at this table.'));
         }
         if (! $state->isActive($seat)) {
-            throw new DomainException('You have finished this match. Watch the others play it out.');
+            throw new DomainException(__('You have finished this match. Watch the others play it out.'));
         }
         if ($state->currentSeat !== $seat) {
-            throw new DomainException('It is not your turn.');
+            throw new DomainException(__('It is not your turn.'));
         }
     }
 
@@ -269,16 +307,18 @@ final class CartaEngine
     /** Ranks the seat; when a single active player remains they are the loser and the match ends. */
     private function finishPlayer(CartaState $state, int $seat): void
     {
-        $rank = count(array_filter($state->players, fn ($player) => $player['rank'] !== null)) + 1;
+        // Finishers rank from the top; players who forfeited already hold the bottom ranks.
+        $rank = count(array_filter($state->players, fn ($player) => $player['status'] === CartaState::DONE)) + 1;
         $state->players[$seat]['status'] = CartaState::DONE;
         $state->players[$seat]['rank'] = $rank;
         $state->events[] = ['type' => 'finish', 'seat' => $seat, 'amount' => $rank];
         $active = $state->activeSeats();
         if (count($active) === 1) {
             $loser = $active[0];
+            $loserRank = count($state->players) - count(array_filter($state->players, fn ($player) => $player['status'] === CartaState::LOSER));
             $state->players[$loser]['status'] = CartaState::LOSER;
-            $state->players[$loser]['rank'] = count($state->players);
-            $state->events[] = ['type' => 'lose', 'seat' => $loser, 'amount' => count($state->players)];
+            $state->players[$loser]['rank'] = $loserRank;
+            $state->events[] = ['type' => 'lose', 'seat' => $loser, 'amount' => $loserRank];
             $state->status = CartaState::FINISHED;
             $state->currentSeat = null;
             $state->drawnCard = null;

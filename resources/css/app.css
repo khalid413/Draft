@@ -388,3 +388,6 @@ footer { min-height:100px; display:flex; align-items:center; justify-content:spa
 .pager-page:hover:not(:disabled) { color:var(--text); background:#ffffff08; }.pager-page.current { color:white; background:var(--primary); border-color:var(--primary); }.pager-page:disabled:not(.current) { border-color:transparent; cursor:default; }
 @media(max-width:600px) { .library-pager { justify-content:center; }.pager-range { width:100%; text-align:center; } }
 .glisa-admin-mark { font:700 18px Inter,sans-serif; color:white; }
+
+/* Arabic: scoreboards and pitches pair positions with numbers, so they keep LTR geometry. */
+[dir="rtl"] .match-score,[dir="rtl"] .match-pitch,[dir="rtl"] .football-pitch,[dir="rtl"] .hero-cards { direction:ltr; }

@@ -10,7 +10,7 @@ use App\Game\GameState;
 use App\Game\PublicGameView;
 use App\Models\Card;
 use DomainException;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class GameEngineTest extends TestCase
 {

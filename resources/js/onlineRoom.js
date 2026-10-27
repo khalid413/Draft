@@ -1,8 +1,9 @@
 import { gameClient } from './gameClient';
+import { t } from './i18n';
 import { celebrate } from './animations';
 
 export const onlineRoom = {
-    room: null, playStyle: 'local', editingRoom: false, connectionStatus: 'Connecting…',
+    room: null, playStyle: 'local', editingRoom: false, connectionStatus: 'Connecting…', // a translation key; the lobby shows t(connectionStatus)
     joinCode: '', joinName: '', copiedCode: false, copiedInvite: false, copyTimer: null, roomRefreshPending: false,
     stopRoomWatch: null, playbackKey: '', adminClicks: [],
     adminTap() {
@@ -97,8 +98,8 @@ export const onlineRoom = {
     },
     rematch() { return this.roomAction('rematch'); },
     // The code is what friends type on the Join screen; the link is an optional shortcut.
-    copyCode() { return this.copyText(this.room.code, 'copiedCode', 'Copy this room code: ' + this.room.code); },
-    copyInvite() { const link = `${location.origin}/draft?join=${this.room.code}`; return this.copyText(link, 'copiedInvite', 'Copy this invite link: ' + link); },
+    copyCode() { return this.copyText(this.room.code, 'copiedCode', t('Copy this room code: :code', { code: this.room.code })); },
+    copyInvite() { const link = `${location.origin}/draft?join=${this.room.code}`; return this.copyText(link, 'copiedInvite', t('Copy this invite link: :link', { link })); },
     async copyText(text, flag, fallback) {
         try {
             await navigator.clipboard.writeText(text);

@@ -1,3 +1,4 @@
+import './i18n'; // first: defines window.t for Alpine expressions
 import Alpine from 'alpinejs';
 import draftDuel from './draftDuel';
 import carta from './carta';

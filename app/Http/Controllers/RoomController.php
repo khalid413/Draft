@@ -88,13 +88,13 @@ class RoomController extends Controller
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
             abort_unless($this->access->index($request, $room) === $room->host, 403);
             if ($room->status !== 'lobby') {
-                throw new DomainException('Settings are locked after kickoff.');
+                throw new DomainException(__('Settings are locked after kickoff.'));
             }
             if ($room->version !== $request->integer('version')) {
-                throw new DomainException('The room changed. Please try again.');
+                throw new DomainException(__('The room changed. Please try again.'));
             }
             if (count($room->members) > $request->integer('capacity')) {
-                throw new DomainException('The room already has more players than that.');
+                throw new DomainException(__('The room already has more players than that.'));
             }
             $members = array_map(fn ($m) => [...$m, 'ready' => false], $room->members);
             $room->update(['settings' => $request->settings(), 'members' => $members, 'host_editing_at' => null, 'version' => $room->version + 1]);
@@ -114,7 +114,7 @@ class RoomController extends Controller
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
             $index = $this->access->index($request, $room);
             if ($room->version !== $request->integer('version')) {
-                throw new DomainException('The room changed. Please try again.');
+                throw new DomainException(__('The room changed. Please try again.'));
             }
             if ($action === 'ready') {
                 $this->lobby->setReady($room, $index, $request->boolean('ready'));
@@ -122,7 +122,7 @@ class RoomController extends Controller
                 // Only announces that the host is in the settings screen; nobody loses their seat.
                 abort_unless($index === $room->host, 403);
                 if ($room->status !== 'lobby') {
-                    throw new DomainException('Settings are locked after kickoff.');
+                    throw new DomainException(__('Settings are locked after kickoff.'));
                 }
                 $room->host_editing_at = $request->boolean('editing') ? now() : null;
             } elseif ($action === 'rematch') {
@@ -132,7 +132,7 @@ class RoomController extends Controller
             } elseif ($action === 'start') {
                 abort_unless($index === $room->host, 403);
                 if ($room->status !== 'lobby' || count($room->members) !== $room->settings['capacity'] || in_array(false, array_column($room->members, 'ready'), true)) {
-                    throw new DomainException('Fill the room and wait for everyone to be ready.');
+                    throw new DomainException(__('Fill the room and wait for everyone to be ready.'));
                 }
                 $s = $room->settings;
                 $state = $this->engine->startGame(array_column($room->members, 'name'), $s['domain'], $s['rounds'], $s['timer'], $s['catalog'] ?? null);
@@ -144,21 +144,21 @@ class RoomController extends Controller
             } elseif ($action === 'replay') {
                 abort_unless($index === $room->host, 403);
                 if ($room->status !== 'finished') {
-                    throw new DomainException('Finish the draft first.');
+                    throw new DomainException(__('Finish the draft first.'));
                 }
                 if (($room->playback['startsAt'] ?? 0) + 15000 > (int) (microtime(true) * 1000)) {
-                    throw new DomainException('Wait for this match to finish.');
+                    throw new DomainException(__('Wait for this match to finish.'));
                 }
                 $state = GameState::fromArray(Game::findOrFail($room->game_uuid)->state);
                 $matches = $state->results['league']['matches'] ?? (isset($state->results['match']) ? [$state->results['match']] : []);
                 $match = $request->integer('matchIndex');
                 if (! isset($matches[$match])) {
-                    throw new DomainException('Choose a football fixture.');
+                    throw new DomainException(__('Choose a football fixture.'));
                 }
                 $room->playback = ['index' => $match, 'startsAt' => (int) (microtime(true) * 1000) + 1500];
             } else {
                 if ($room->status !== 'playing') {
-                    throw new DomainException('This draft is not running.');
+                    throw new DomainException(__('This draft is not running.'));
                 }
                 $game = Game::whereKey($room->game_uuid)->lockForUpdate()->firstOrFail();
                 $state = GameState::fromArray($game->state);
@@ -206,7 +206,7 @@ class RoomController extends Controller
     {
         // Draft Duel keeps guest seats reserved mid-match; only the host may hand over and leave.
         if ($index !== $room->host && $room->status === 'playing') {
-            throw new DomainException('Your seat stays reserved during a match. You can return using this browser.');
+            throw new DomainException(__('Your seat stays reserved during a match. You can return using this browser.'));
         }
         if ($this->lobby->leave($room, $index)) {
             $game = Game::whereKey($room->game_uuid)->lockForUpdate()->firstOrFail();
@@ -220,7 +220,7 @@ class RoomController extends Controller
     {
         // A shared football replay finishes for everyone before the room resets.
         if ($room->status === 'finished' && ($room->playback['startsAt'] ?? 0) + 15000 > (int) (microtime(true) * 1000)) {
-            throw new DomainException('Wait for this match to finish.');
+            throw new DomainException(__('Wait for this match to finish.'));
         }
         $this->lobby->rematch($room);
     }

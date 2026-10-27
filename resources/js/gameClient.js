@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import { t } from './i18n';
 
 // All network operations stay here, including room subscriptions and resync.
 async function request(path, payload) {
@@ -13,8 +14,8 @@ async function request(path, payload) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-        const message = Object.values(data.errors || {}).flat().join(' ') || data.message || 'Unable to reach the arena. Try again.';
-        const error = new Error(response.status === 419 ? 'Your session expired. Reload this page to continue.' : message);
+        const message = Object.values(data.errors || {}).flat().join(' ') || data.message || t('Unable to reach the server. Try again.');
+        const error = new Error(response.status === 419 ? t('Your session expired. Reload this page to continue.') : message);
         error.status = response.status;
         throw error;
     }

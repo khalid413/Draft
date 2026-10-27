@@ -1,4 +1,5 @@
 import { gameClient } from './gameClient';
+import { t } from './i18n';
 
 const STORAGE_KEY = 'draft-duel-music';
 const readSaved = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } };
@@ -13,7 +14,7 @@ function audioFor(player) {
         audio.addEventListener('ended', () => player.nextSong());
         audio.addEventListener('play', () => { player.musicPlaying = true; });
         audio.addEventListener('pause', () => { player.musicPlaying = false; });
-        audio.addEventListener('error', () => { player.musicPlaying = false; player.musicError = 'This song could not be played.'; });
+        audio.addEventListener('error', () => { player.musicPlaying = false; player.musicError = t('This song could not be played.'); });
     }
     return audio;
 }
