@@ -29,7 +29,7 @@ function flyer(face, back, width, faceDown) {
  * Flies a card from one box to another along an arc. Resolves with the card element still in place,
  * so the caller decides when it disappears. A timer backs up the animation in case the tab is throttled.
  */
-function fly({ face, back, from, to, flip = false, faceDown = false, duration = TIMING.flight, lift = 80, spin = 0, settle = 0, startOpacity = 1 }) {
+function fly({ face, back, from, to, flip = false, faceDown = false, duration = TIMING.flight, lift = 80, spin = 0, settle = 0, startOpacity = 1, anticipate = false, bounce = false }) {
     return new Promise(resolve => {
         if (!from || !to) { resolve(null); return; }
         const card = flyer(face, back, to.width, faceDown || flip);
@@ -37,11 +37,13 @@ function fly({ face, back, from, to, flip = false, faceDown = false, duration = 
         card.style.top = `${to.top + to.height / 2 - (to.width * 140 / 85) / 2}px`;
         const start = center(from), end = center(to), dx = start.x - end.x, dy = start.y - end.y;
         const scale = Math.max(.35, from.width / to.width), peak = Math.max(scale, 1) * 1.14;
-        const motion = card.animate([
-            { transform: `translate(${dx}px, ${dy}px) scale(${scale}) rotate(${spin}deg)`, opacity: startOpacity, easing: 'cubic-bezier(.25,.7,.4,1)' },
-            { transform: `translate(${dx * .42}px, ${dy * .42 - lift}px) scale(${peak}) rotate(${spin * .4}deg)`, opacity: 1, offset: .48, easing: 'cubic-bezier(.5,0,.75,.5)' },
-            { transform: `translate(0, 0) scale(1) rotate(${settle}deg)`, opacity: 1 },
-        ], { duration, fill: 'forwards' });
+        // Anticipation: the card dips and leans back before it goes. Follow-through: it overshoots the pile and settles.
+        const frames = [{ transform: `translate(${dx}px, ${dy}px) scale(${scale}) rotate(${spin}deg)`, opacity: startOpacity, easing: 'ease-out' }];
+        if (anticipate) frames.push({ transform: `translate(${dx}px, ${dy + 10}px) scale(${scale * .94}) rotate(${spin + 5}deg)`, opacity: 1, offset: .14, easing: 'cubic-bezier(.25,.7,.4,1)' });
+        frames.push({ transform: `translate(${dx * .42}px, ${dy * .42 - lift}px) scale(${peak}) rotate(${spin * .4}deg)`, opacity: 1, offset: anticipate ? .52 : .48, easing: 'cubic-bezier(.5,0,.75,.5)' });
+        if (anticipate || bounce) frames.push({ transform: `translate(0, ${anticipate ? 6 : 3}px) scale(${anticipate ? .95 : .97}) rotate(${settle - 2}deg)`, opacity: 1, offset: .84, easing: 'cubic-bezier(.3,1.5,.6,1)' });
+        frames.push({ transform: `translate(0, 0) scale(1) rotate(${settle}deg)`, opacity: 1 });
+        const motion = card.animate(frames, { duration: duration + (anticipate ? 140 : 0), fill: 'forwards' });
         if (flip) {
             card.firstElementChild.animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(180deg)', offset: .25 }, { transform: 'rotateY(0deg)' }],
                 { duration, easing: 'ease-in-out', fill: 'forwards' });
@@ -49,8 +51,48 @@ function fly({ face, back, from, to, flip = false, faceDown = false, duration = 
         let done = false;
         const finish = () => { if (!done) { done = true; resolve(card); } };
         motion.onfinish = finish;
-        setTimeout(finish, duration + 400);
+        setTimeout(finish, duration + 540);
     });
+}
+
+// How hard each card hits the table: the shake in pixels after the landing freeze.
+const WEIGHT = { wild4: 11, draw2: 7, skip: 4, reverse: 4, wild: 3 };
+
+/** Hit-stop, then shake: the table holds still for a beat when a heavy card lands, then jolts. */
+async function slam(root, value) {
+    const amount = WEIGHT[value];
+    if (!amount) return;
+    await wait(85);
+    const felt = root?.querySelector('.carta-oval');
+    const step = i => `translate(${(i % 2 ? -1 : 1) * amount * (1 - i / 7)}px, ${(i % 3 - 1) * amount * .5 * (1 - i / 7)}px)`;
+    felt?.animate([{ transform: 'translate(0, 0)' }, ...Array.from({ length: 6 }, (_, i) => ({ transform: step(i) })), { transform: 'translate(0, 0)' }],
+        { duration: 260 + amount * 12, easing: 'linear' });
+    if (amount >= 7 && navigator.userActivation?.hasBeenActive) navigator.vibrate?.(amount * 4); // phones only, after the player has touched the page
+}
+
+/** A big +N over the player who has to draw, counting down as each card arrives. */
+function penaltyCounter(box, amount) {
+    if (!box || amount < 2) return null;
+    const el = document.createElement('div');
+    el.className = 'uno-counter';
+    el.style.left = `${center(box).x}px`;
+    el.style.top = `${box.top}px`;
+    document.body.appendChild(el);
+    let left = amount;
+    const show = () => {
+        el.textContent = left > 0 ? `+${left}` : '✓';
+        el.animate([{ transform: 'translate(-50%, -50%) scale(1.45)' }, { transform: 'translate(-50%, -50%) scale(1)' }], { duration: 220, easing: 'cubic-bezier(.3,1.6,.5,1)' });
+    };
+    show();
+    return {
+        tick() { left = Math.max(0, left - 1); show(); },
+        async done() {
+            await wait(260);
+            const out = el.animate([{ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%, -90%) scale(.8)' }], { duration: 320, easing: 'ease-in' });
+            await new Promise(resolve => { out.onfinish = resolve; setTimeout(resolve, 500); });
+            el.remove();
+        },
+    };
 }
 
 /** The pile jolts and a ring in the card's colour spreads from it. */
@@ -157,11 +199,11 @@ export async function playMoves({ root, moves, game, viewer, playedFrom = {}, ne
                 const from = (mine && playedFrom[move.card.id]) || seatBox(move.seat);
                 const to = plain(rectOf(discard));
                 sound.play('flick');
-                const card = await fly({ face: move.card.image, back: game.back, from, to, flip: !mine, spin: mine ? 8 : -24, settle: -3, lift: mine ? 110 : 60 });
+                const card = await fly({ face: move.card.image, back: game.back, from, to, flip: !mine, spin: mine ? 8 : -24, settle: -3, lift: mine ? 110 : 60, anticipate: true });
                 sound.play('land');
                 const color = move.color || move.card.color;
                 if (move === lastPlay) { if (top) top.style.visibility = ''; card?.remove(); } else if (card) parked.push(card);
-                await impact(discard, color);
+                await Promise.all([impact(discard, color), finishes ? null : slam(root, move.card.value)]);
                 // A finishing card's effect is cancelled, so it gets no banner.
                 if (!finishes) {
                     if (move.card.value === 'wild' || move.card.value === 'wild4') { ripple(root, move.color); sound.play('wild'); }
@@ -169,21 +211,25 @@ export async function playMoves({ root, moves, game, viewer, playedFrom = {}, ne
                     if (EFFECTS[move.card.value]) { sound.play('effect'); await banner(root, EFFECTS[move.card.value], color); }
                     else if (move.card.value === 'wild') await wait(450);
                 }
-            } else if (['draw', 'accept_draw', 'caught', 'challenge_lost', 'challenge_won'].includes(move.type) && move.amount) {
-                const seat = move.type === 'challenge_won' ? move.target : move.seat;
+            } else if (['draw', 'accept_draw', 'caught'].includes(move.type) && move.amount) {
+                const seat = move.seat;
                 const mine = seat === viewer;
-                if (move.type === 'caught') { sound.play('effect'); await banner(root, '+2', 'red', { duration: 600 }); }
+                if (move.type !== 'draw') sound.play('effect');
                 const flights = [];
-                for (let i = 0; i < Math.min(move.amount, 8); i++) {
+                const counter = move.type !== 'draw' ? penaltyCounter(seatBox(seat), move.amount) : null;
+                for (let i = 0; i < Math.min(move.amount, 12); i++) {
                     const target = mine ? arriving.shift() : null;
                     const to = mine && target ? plain(rectOf(target)) : (() => { const box = seatBox(seat); return box && { left: center(box).x - drawPile.width / 2 + i * 8, top: center(box).y - drawPile.height / 2, width: drawPile.width, height: drawPile.height }; })();
                     const face = target?.querySelector('img')?.src;
                     sound.play('draw');
-                    flights.push(fly({ face, back: game.back, from: drawPile, to, flip: Boolean(face), faceDown: !face, duration: TIMING.draw, lift: 40, spin: 10 })
-                        .then(card => { card?.remove(); if (target) target.style.visibility = ''; }));
+                    flights.push(fly({ face, back: game.back, from: drawPile, to, flip: Boolean(face), faceDown: !face, duration: TIMING.draw, lift: 40, spin: 10, bounce: true })
+                        .then(card => { card?.remove(); if (target) target.style.visibility = ''; counter?.tick(); }));
                     await wait(TIMING.drawGap);
                 }
                 await Promise.all(flights);
+                // More cards than the flights shown (a long stack): finish the count at once.
+                for (let i = flights.length; i < move.amount; i++) counter?.tick();
+                await counter?.done();
             } else if (move.type === 'uno') {
                 sound.play('uno');
                 await burst(move.seat === viewer ? root.querySelector('.carta-chip.me') : root.querySelector(`[data-seat="${move.seat}"] .carta-chip`));

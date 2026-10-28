@@ -20,7 +20,7 @@ class UnoClassicRulesTest extends TestCase
     }
 
     /** Builds an exact table: given hands and top card; every other card goes to the draw pile (or $draw, last drawn first). */
-    private function table(array $hands, string $top, int $current = 0, ?string $color = null, bool $stacking = false, ?array $draw = null, int $direction = 1): UnoState
+    private function table(array $hands, string $top, int $current = 0, ?string $color = null, string $stacking = UnoState::STACK_OFF, ?array $draw = null, int $direction = 1): UnoState
     {
         $used = array_merge([$top], ...$hands);
         $rest = array_values(array_diff((new ClassicVariant)->deck(), $used));
@@ -92,7 +92,7 @@ class UnoClassicRulesTest extends TestCase
     {
         foreach ([2, 4, 6] as $count) {
             foreach (range(1, 15) as $seed) {
-                $state = $this->rules($seed * $count)->start(array_map(fn ($i) => 'P'.$i, range(1, $count)), false);
+                $state = $this->rules($seed * $count)->start(array_map(fn ($i) => 'P'.$i, range(1, $count)), UnoState::STACK_OFF);
                 foreach ($state->players as $player) {
                     $this->assertCount(7, $player['hand']);
                 }
@@ -149,19 +149,27 @@ class UnoClassicRulesTest extends TestCase
         $this->assertSame(0, $state->currentSeat);
     }
 
-    public function test_official_mode_draw_two_is_applied_at_once_and_cannot_be_stacked(): void
+    public function test_official_mode_applies_plus_two_and_plus_four_at_once(): void
     {
         $state = $this->table([['red_draw2_1', 'red_1_1'], ['blue_draw2_1', 'green_5_1'], ['red_3_1']], 'red_9_1');
         $this->rules()->play($state, 0, 'red_draw2_1');
         $this->assertCount(4, $state->players[1]['hand'], 'Seat 1 drew two even though it holds a +2.');
         $this->assertSame(2, $state->currentSeat, 'And lost the turn.');
         $this->assertSame(UnoState::NONE, $state->pendingEffect);
+
+        // A +4 can be played any time (no colour restriction, no challenge) and lands at once.
+        $state = $this->table([['wild4_1', 'red_1_1'], ['wild4_2', 'green_5_1'], ['red_3_1']], 'red_9_1');
+        $this->assertContains('wild4_1', $this->rules()->legalCards($state, 0), 'Holding red does not block the +4.');
+        $this->rules()->play($state, 0, 'wild4_1', 'yellow');
+        $this->assertCount(6, $state->players[1]['hand']);
+        $this->assertSame([UnoState::NONE, 0, 2], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
+        $this->assertSame('yellow', $state->activeColor);
         $this->assertConserved($state);
     }
 
-    public function test_house_rule_stacking_accumulates_and_never_mixes_two_and_four(): void
+    public function test_same_card_stacking_adds_up_and_never_mixes_two_and_four(): void
     {
-        $state = $this->table([['red_draw2_1', 'red_1_1'], ['blue_draw2_1', 'wild4_1', 'green_5_1'], ['yellow_draw2_2', 'red_3_1'], ['green_6_1']], 'red_9_1', stacking: true);
+        $state = $this->table([['red_draw2_1', 'red_1_1'], ['blue_draw2_1', 'wild4_1', 'green_5_1'], ['yellow_draw2_2', 'red_3_1'], ['green_6_1']], 'red_9_1', stacking: UnoState::STACK_SAME);
         $this->rules()->play($state, 0, 'red_draw2_1');
         $this->assertSame([UnoState::DRAW_TWO, 2, 1], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
         $this->assertSame(['blue_draw2_1'], $this->rules()->legalCards($state, 1), 'A +4 cannot answer a +2.');
@@ -174,60 +182,34 @@ class UnoClassicRulesTest extends TestCase
         $this->assertSame([UnoState::NONE, 0, 0], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
         $this->assertConserved($state);
 
-        $state = $this->table([['wild4_1', 'blue_1_1'], ['wild4_2', 'red_draw2_1', 'green_5_1'], ['red_3_1', 'red_4_1']], 'red_9_1', stacking: true);
+        $state = $this->table([['wild4_1', 'blue_1_1'], ['wild4_2', 'red_draw2_1', 'green_5_1'], ['red_3_1', 'red_4_1', 'wild4_3']], 'red_9_1', stacking: UnoState::STACK_SAME);
         $this->rules()->play($state, 0, 'wild4_1', 'blue');
         $this->assertSame(['wild4_2'], $this->rules()->legalCards($state, 1), 'A +2 cannot answer a +4.');
         $this->rules()->play($state, 1, 'wild4_2', 'green');
         $this->assertSame([UnoState::DRAW_FOUR, 8, 2], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
         $this->rules()->accept($state, 2);
-        $this->assertCount(10, $state->players[2]['hand']);
-        $this->assertSame(0, $state->currentSeat, 'The target took eight and lost the turn.');
+        $this->assertCount(11, $state->players[2]['hand']);
+        $this->assertSame(0, $state->currentSeat, 'The target chose to take eight and lost the turn.');
         $this->assertSame('green', $state->activeColor);
         $this->assertConserved($state);
     }
 
-    public function test_wild_draw_four_waits_for_its_target_who_may_accept(): void
+    public function test_mixed_stacking_lets_plus_two_and_plus_four_answer_each_other(): void
     {
-        $state = $this->table([['wild4_1', 'blue_1_1'], ['wild4_2', 'green_5_1'], ['red_3_1']], 'red_9_1');
-        $this->rules()->play($state, 0, 'wild4_1', 'yellow');
-        $this->assertSame([UnoState::DRAW_FOUR, 4, 1], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
-        $this->assertSame([], $this->rules()->legalCards($state, 1), 'No stacking in official mode.');
-        $this->rejects(fn () => $this->rules()->play($state, 1, 'wild4_2', 'red'), 'Challenge the +4');
-        $this->rules()->accept($state, 1);
-        $this->assertCount(6, $state->players[1]['hand']);
-        $this->assertSame(2, $state->currentSeat);
-        $this->assertSame('yellow', $state->activeColor);
-    }
-
-    public function test_challenging_an_illegal_four_makes_its_player_draw_and_the_challenger_plays_on(): void
-    {
-        // Seat 0 holds a red card while red is active: the +4 is a bluff.
-        $state = $this->table([['wild4_1', 'red_1_1'], ['green_5_1', 'blue_7_1'], ['red_3_1']], 'red_9_1');
-        $this->rules()->play($state, 0, 'wild4_1', 'green');
-        $this->assertFalse($state->challenge['legal']);
-        $this->rejects(fn () => $this->rules()->challenge($state, 2), 'not your turn');
-        $this->rules()->challenge($state, 1);
-        $this->assertCount(5, $state->players[0]['hand'], 'The bluffer draws the four.');
-        $this->assertCount(2, $state->players[1]['hand']);
-        $this->assertSame(1, $state->currentSeat, 'The challenger keeps the turn.');
-        $this->assertSame('green', $state->activeColor);
-        $this->assertSame(['green_5_1'], $this->rules()->legalCards($state, 1));
+        $state = $this->table([['red_draw2_1', 'red_1_1'], ['wild4_1', 'green_5_1'], ['blue_draw2_1', 'red_3_1'], ['green_6_1']], 'red_9_1', stacking: UnoState::STACK_MIXED);
+        $this->rules()->play($state, 0, 'red_draw2_1');
+        $this->assertSame(['wild4_1'], $this->rules()->legalCards($state, 1), 'A +4 answers a +2.');
+        $this->rules()->play($state, 1, 'wild4_1', 'blue');
+        $this->assertSame([UnoState::DRAW_FOUR, 6, 2], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
+        $this->assertSame(['blue_draw2_1'], $this->rules()->legalCards($state, 2), 'A +2 answers a +4.');
+        $this->rejects(fn () => $this->rules()->play($state, 2, 'red_3_1'), 'Stack a +2 or a +4');
+        $this->rules()->play($state, 2, 'blue_draw2_1');
+        // Seat 3 holds neither: all eight cards land at once and play moves on.
+        $this->assertCount(9, $state->players[3]['hand']);
+        $this->assertSame([UnoState::NONE, 0, 0], [$state->pendingEffect, $state->pendingDraw, $state->currentSeat]);
         $this->assertConserved($state);
     }
 
-    public function test_challenging_a_legal_four_costs_the_challenger_six_and_the_turn(): void
-    {
-        // A matching number (9) is fine: only the active colour makes a +4 illegal.
-        $state = $this->table([['wild4_1', 'blue_9_1'], ['green_5_1'], ['red_3_1']], 'red_9_1');
-        $this->rules()->play($state, 0, 'wild4_1', 'blue');
-        $this->assertTrue($state->challenge['legal']);
-        $this->rules()->challenge($state, 1);
-        $this->assertCount(7, $state->players[1]['hand']);
-        $this->assertCount(1, $state->players[0]['hand']);
-        $this->assertSame(2, $state->currentSeat);
-        $this->rejects(fn () => $this->rules()->challenge($state, 2), 'no +4 to challenge');
-        $this->assertConserved($state);
-    }
 
     public function test_drawing_keeps_the_turn_only_for_a_playable_drawn_card(): void
     {
@@ -344,7 +326,7 @@ class UnoClassicRulesTest extends TestCase
 
     public function test_hundreds_of_automatic_matches_end_with_unique_ranks_one_loser_and_conserved_cards(): void
     {
-        foreach ([false, true] as $stacking) {
+        foreach (UnoState::STACKING as $stacking) {
             foreach (range(1, 120) as $seed) {
                 $count = 2 + $seed % 5;
                 $rules = $this->rules($seed);

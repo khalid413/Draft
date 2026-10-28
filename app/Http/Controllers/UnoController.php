@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 /** UNO rooms for every variant. The browser only sends intents; the variant's rules engine applies every rule here. */
 class UnoController extends Controller
 {
-    private const GAME_ACTIONS = ['play', 'draw', 'pass', 'accept', 'challenge', 'uno', 'catch'];
+    private const GAME_ACTIONS = ['play', 'draw', 'pass', 'accept', 'uno', 'catch'];
 
     public function __construct(private UnoStore $store, private UnoView $view, private RoomAccess $access, private RoomLobby $lobby) {}
 
@@ -51,8 +51,8 @@ class UnoController extends Controller
     {
         $request->merge(['name' => is_string($request->input('name')) ? trim($request->input('name')) : $request->input('name')]);
         $data = $request->validate(['name' => 'required|string|min:2|max:20', 'capacity' => 'required|integer|between:2,6',
-            'variant' => ['required', 'in:'.implode(',', UnoVariants::available())], 'stacking' => 'required|boolean']);
-        $settings = ['capacity' => (int) $data['capacity'], 'variant' => $data['variant'], 'stacking' => (bool) $data['stacking']];
+            'variant' => ['required', 'in:'.implode(',', UnoVariants::available())], 'stacking' => ['required', 'in:'.implode(',', UnoState::STACKING)]]);
+        $settings = ['capacity' => (int) $data['capacity'], 'variant' => $data['variant'], 'stacking' => $data['stacking']];
 
         return $this->reply($this->lobby->open($request, 'uno', $data['name'], $settings), 0);
     }
@@ -75,7 +75,7 @@ class UnoController extends Controller
     {
         $this->unoRoom($room);
         $request->validate(['version' => 'required|integer|min:0', 'ready' => 'sometimes|boolean',
-            'stacking' => [$action === 'settings' ? 'required' : 'prohibited', 'boolean'],
+            'stacking' => [$action === 'settings' ? 'required' : 'prohibited', 'in:'.implode(',', UnoState::STACKING)],
             'actionId' => [in_array($action, self::GAME_ACTIONS, true) ? 'required' : 'sometimes', 'uuid'],
             'card' => [$action === 'play' ? 'required' : 'prohibited', 'string', 'max:20'],
             'color' => ['sometimes', 'nullable', 'in:'.implode(',', UnoCard::COLORS)],
@@ -94,7 +94,7 @@ class UnoController extends Controller
             }
             match ($action) {
                 'ready' => $this->lobby->setReady($room, $index, $request->boolean('ready')),
-                'settings' => $this->settings($room, $index, $request->boolean('stacking')),
+                'settings' => $this->settings($room, $index, $request->input('stacking')),
                 'start' => $this->start($room, $index),
                 'rematch' => $this->lobby->rematch($room),
                 'leave' => $this->leave($room, $index, $game),
@@ -121,7 +121,7 @@ class UnoController extends Controller
     }
 
     /** The host picks the stacking rule in the lobby; it is copied onto the match at the deal and locked from then on. */
-    private function settings(Room $room, int $index, bool $stacking): void
+    private function settings(Room $room, int $index, string $stacking): void
     {
         abort_unless($index === $room->host, 403);
         if ($room->status !== 'lobby') {
@@ -141,7 +141,7 @@ class UnoController extends Controller
         if (count($room->members) < 2 || in_array(false, array_column($room->members, 'ready'), true)) {
             throw new DomainException(__('Wait for at least two players, all of them ready.'));
         }
-        $state = $this->rules($room)->start(array_column($room->members, 'name'), (bool) $room->settings['stacking']);
+        $state = $this->rules($room)->start(array_column($room->members, 'name'), UnoState::stackingOf($room->settings['stacking']));
         $game = $this->store->create($room, $room->settings['variant'], $state);
         $room->game_uuid = $game->id;
         $room->status = 'playing';
@@ -159,7 +159,6 @@ class UnoController extends Controller
             'draw' => $rules->draw($state, $seat),
             'pass' => $rules->pass($state, $seat),
             'accept' => $rules->accept($state, $seat),
-            'challenge' => $rules->challenge($state, $seat),
             'uno' => $rules->callUno($state, $seat),
             'catch' => $rules->catchUno($state, $seat, $request->integer('target')),
         };

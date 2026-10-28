@@ -19,7 +19,7 @@ final class UnoView
 
         return [
             'id' => $room->id, 'code' => $room->code, 'status' => $room->status, 'version' => $room->version,
-            'settings' => ['capacity' => $room->settings['capacity'], 'variant' => $room->settings['variant'], 'stacking' => (bool) $room->settings['stacking']],
+            'settings' => ['capacity' => $room->settings['capacity'], 'variant' => $room->settings['variant'], 'stacking' => UnoState::stackingOf($room->settings['stacking'])],
             'viewerIndex' => $viewer, 'host' => $room->host, 'isHost' => $viewer === $room->host,
             'members' => array_map(fn ($member) => ['name' => $member['name'], 'ready' => $member['ready'], 'left' => $member['left'] ?? false], $room->members),
             'game' => $game ? $this->game($room, $game, $viewer) : null,
@@ -55,7 +55,6 @@ final class UnoView
                 'canDraw' => $isTurn && $state->pendingEffect === UnoState::NONE && $state->drawnCard === null,
                 'canPass' => $isTurn && $state->drawnCard !== null,
                 'canAccept' => $isTurn && $state->pendingEffect !== UnoState::NONE,
-                'canChallenge' => $isTurn && $state->pendingEffect === UnoState::DRAW_FOUR && ($state->challenge['target'] ?? null) === $viewer,
                 'canCallUno' => $rules->canCallUno($state, $viewer), 'unoCalled' => $me['uno'], 'exposed' => $state->unoExposed === $viewer] : null,
             'rankings' => $this->rankings($state),
             'recent' => $this->recent($variant, $game, $names),

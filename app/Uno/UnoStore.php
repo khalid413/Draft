@@ -38,7 +38,7 @@ final class UnoStore
         return new UnoState(status: $game->status, players: $players, drawPile: $game->draw_pile, discardPile: $game->discard_pile,
             currentSeat: $game->current_seat, direction: $game->direction, activeColor: $game->active_color,
             pendingEffect: $game->pending_effect, pendingDraw: $game->pending_draw, drawnCard: $game->drawn_card,
-            challenge: $game->challenge, unoExposed: $game->uno_exposed, stacking: $game->stacking, turnNumber: $game->turn_number);
+            unoExposed: $game->uno_exposed, stacking: $game->stacking, turnNumber: $game->turn_number);
     }
 
     /** Writes the state, bumps the version and appends the action's moves; the first move carries the client's action id. */
@@ -46,7 +46,7 @@ final class UnoStore
     {
         $game->update(['status' => $state->status, 'turn_number' => $state->turnNumber, 'current_seat' => $state->currentSeat,
             'direction' => $state->direction, 'active_color' => $state->activeColor, 'pending_effect' => $state->pendingEffect,
-            'pending_draw' => $state->pendingDraw, 'drawn_card' => $state->drawnCard, 'challenge' => $state->challenge,
+            'pending_draw' => $state->pendingDraw, 'drawn_card' => $state->drawnCard,
             'uno_exposed' => $state->unoExposed, 'draw_pile' => $state->drawPile, 'discard_pile' => $state->discardPile,
             'version' => $game->version + 1, 'finished_at' => $state->status === UnoState::FINISHED ? ($game->finished_at ?? now()) : null]);
         $rows = $game->players()->get()->keyBy('seat');

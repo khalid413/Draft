@@ -28,12 +28,20 @@ final class UnoState
 
     public const DRAW_FOUR = 'DRAW_FOUR';
 
+    /** Stacking rules a room can choose: none (official), +2 on +2 and +4 on +4, or +2 and +4 on each other. */
+    public const STACK_OFF = 'off';
+
+    public const STACK_SAME = 'same';
+
+    public const STACK_MIXED = 'mixed';
+
+    public const STACKING = [self::STACK_OFF, self::STACK_SAME, self::STACK_MIXED];
+
     /**
      * @param  array<int, array{name: string, hand: list<string>, status: string, rank: ?int, uno: bool}>  $players  keyed by seat
      * @param  list<string>  $drawPile  last element is drawn next
      * @param  list<string>  $discardPile  last element is the face-up top card
      * @param  ?string  $drawnCard  card drawn this turn that its owner may still play (only that card)
-     * @param  ?array{by: int, target: int, legal: bool}  $challenge  the last Wild Draw Four, open to a challenge by its target
      * @param  ?int  $unoExposed  seat left on one card without calling UNO; any opponent may catch it until the next move
      * @param  list<array<string, mixed>>  $events  moves produced by the current action, persisted as history
      */
@@ -48,12 +56,21 @@ final class UnoState
         public string $pendingEffect = self::NONE,
         public int $pendingDraw = 0,
         public ?string $drawnCard = null,
-        public ?array $challenge = null,
         public ?int $unoExposed = null,
-        public bool $stacking = false,
+        public string $stacking = self::STACK_OFF,
         public int $turnNumber = 0,
         public array $events = [],
     ) {}
+
+    /** Reads a room's stacking setting; tables opened before the three-way choice stored true/false. */
+    public static function stackingOf(mixed $setting): string
+    {
+        return match (true) {
+            in_array($setting, self::STACKING, true) => $setting,
+            $setting === true => self::STACK_SAME,
+            default => self::STACK_OFF,
+        };
+    }
 
     public function topCard(): UnoCard
     {

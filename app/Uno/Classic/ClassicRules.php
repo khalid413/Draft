@@ -18,8 +18,6 @@ final class ClassicRules implements UnoRules
 {
     public const UNO_PENALTY = 2;
 
-    public const CHALLENGE_EXTRA = 2;
-
     private Randomizer $random;
 
     public function __construct(private ClassicVariant $variant, ?Randomizer $random = null)
@@ -28,7 +26,7 @@ final class ClassicRules implements UnoRules
     }
 
     /** Shuffles the 108 cards, deals seven each and turns up a number card to start (action cards go back into the deck). */
-    public function start(array $names, bool $stacking, ?int $startingSeat = null): UnoState
+    public function start(array $names, string $stacking, ?int $startingSeat = null): UnoState
     {
         $names = array_values($names);
         if (count($names) < 2 || count($names) > 6) {
@@ -68,9 +66,18 @@ final class ClassicRules implements UnoRules
     {
         return match ($state->pendingEffect) {
             // Only reachable with stacking on: without it a penalty is resolved before the target gets to act.
-            UnoState::DRAW_TWO => $state->stacking && $card->value === 'draw2',
-            UnoState::DRAW_FOUR => $state->stacking && $card->value === 'wild4',
+            UnoState::DRAW_TWO, UnoState::DRAW_FOUR => $this->stacks($state, $card),
             default => $card->isWild() || $card->color === $state->activeColor || $card->value === $state->topCard()->value,
+        };
+    }
+
+    /** Which penalty cards may answer a pending +2/+4 under the room's stacking rule. */
+    private function stacks(UnoState $state, UnoCard $card): bool
+    {
+        return match ($state->stacking) {
+            UnoState::STACK_MIXED => in_array($card->value, ['draw2', 'wild4'], true),
+            UnoState::STACK_SAME => $card->value === ($state->pendingEffect === UnoState::DRAW_TWO ? 'draw2' : 'wild4'),
+            default => false,
         };
     }
 
@@ -88,8 +95,11 @@ final class ClassicRules implements UnoRules
         }
         if (! $this->canPlay($state, $card)) {
             throw new DomainException(match ($state->pendingEffect) {
-                UnoState::DRAW_TWO => $state->stacking ? __('Stack a +2, or take the penalty.') : __('Take the penalty cards.'),
-                UnoState::DRAW_FOUR => $state->stacking ? __('Stack a +4, challenge it, or take the penalty.') : __('Challenge the +4, or take the penalty.'),
+                UnoState::DRAW_TWO, UnoState::DRAW_FOUR => match ($state->stacking) {
+                    UnoState::STACK_MIXED => __('Stack a +2 or a +4, or take the penalty.'),
+                    UnoState::STACK_SAME => $state->pendingEffect === UnoState::DRAW_TWO ? __('Stack a +2, or take the penalty.') : __('Stack a +4, or take the penalty.'),
+                    default => __('Take the penalty cards.'),
+                },
                 default => __('That card does not match the colour, number or symbol on the table.'),
             });
         }
@@ -97,8 +107,6 @@ final class ClassicRules implements UnoRules
         if ($card->isWild() && ! $finishing && ! UnoCard::colorIsValid($color)) {
             throw new DomainException(__('Choose the next colour for your wild card.'));
         }
-        // A Wild Draw Four is only legal without a card of the current colour; it can still be played as a bluff and challenged.
-        $legalFour = $card->value !== 'wild4' || ! array_filter($hand, fn ($id) => UnoCard::fromId($id)->color === $state->activeColor);
         $this->closeUnoWindow($state, $seat);
 
         unset($hand[$position]);
@@ -112,7 +120,6 @@ final class ClassicRules implements UnoRules
             $state->activeColor = $card->color ?? $state->activeColor;
             $state->pendingEffect = UnoState::NONE;
             $state->pendingDraw = 0;
-            $state->challenge = null;
             $this->finishPlayer($state, $seat);
             if ($state->status === UnoState::PLAYING) {
                 $this->advance($state, $seat);
@@ -134,20 +141,14 @@ final class ClassicRules implements UnoRules
                 $this->advance($state, $seat, count($state->activeSeats()) === 2 ? 2 : 1);
                 break;
             case 'draw2':
-                $state->pendingEffect = UnoState::DRAW_TWO;
-                $state->pendingDraw += 2;
+            case 'wild4':
+                $state->pendingEffect = $card->value === 'draw2' ? UnoState::DRAW_TWO : UnoState::DRAW_FOUR;
+                $state->pendingDraw += $card->value === 'draw2' ? 2 : 4;
                 $this->advance($state, $seat);
-                // Without stacking, or without a +2 to stack, there is nothing to decide: the penalty applies at once.
+                // Without stacking, or without a card to stack, there is nothing to decide: the penalty applies at once.
                 if (! $this->legalCards($state, $state->currentSeat)) {
                     $this->takePenalty($state, $state->currentSeat);
                 }
-                break;
-            case 'wild4':
-                $state->pendingEffect = UnoState::DRAW_FOUR;
-                $state->pendingDraw += 4;
-                $this->advance($state, $seat);
-                // The target always gets a choice, because they may challenge.
-                $state->challenge = ['by' => $seat, 'target' => $state->currentSeat, 'legal' => $legalFour];
                 break;
             default:
                 $this->advance($state, $seat);
@@ -206,39 +207,6 @@ final class ClassicRules implements UnoRules
         }
         $this->closeUnoWindow($state, $seat);
         $this->takePenalty($state, $seat);
-        $this->assertConserved($state);
-
-        return $state;
-    }
-
-    /**
-     * Challenges the Wild Draw Four aimed at this seat. If it was played while holding the active colour,
-     * its player takes the penalty and the challenger plays on; otherwise the challenger takes it plus two and loses the turn.
-     */
-    public function challenge(UnoState $state, int $seat): UnoState
-    {
-        $this->assertTurn($state, $seat);
-        $challenge = $state->challenge;
-        if ($state->pendingEffect !== UnoState::DRAW_FOUR || ! $challenge || $challenge['target'] !== $seat) {
-            throw new DomainException(__('There is no +4 to challenge.'));
-        }
-        $this->closeUnoWindow($state, $seat);
-        $penalty = $state->pendingDraw;
-        $state->pendingEffect = UnoState::NONE;
-        $state->pendingDraw = 0;
-        $state->challenge = null;
-        if (! $challenge['legal']) {
-            $cards = $this->take($state, $penalty);
-            $state->players[$challenge['by']]['hand'] = [...$state->players[$challenge['by']]['hand'], ...$cards];
-            $this->syncUno($state, $challenge['by']);
-            $state->events[] = ['type' => 'challenge_won', 'seat' => $seat, 'target' => $challenge['by'], 'amount' => count($cards)];
-        } else {
-            $cards = $this->take($state, $penalty + self::CHALLENGE_EXTRA);
-            $state->players[$seat]['hand'] = [...$state->players[$seat]['hand'], ...$cards];
-            $this->syncUno($state, $seat);
-            $state->events[] = ['type' => 'challenge_lost', 'seat' => $seat, 'target' => $challenge['by'], 'amount' => count($cards)];
-            $this->advance($state, $seat);
-        }
         $this->assertConserved($state);
 
         return $state;
@@ -307,9 +275,6 @@ final class ClassicRules implements UnoRules
         if ($state->unoExposed === $seat) {
             $state->unoExposed = null;
         }
-        if (($state->challenge['by'] ?? null) === $seat) {
-            $state->challenge = null; // Nobody left to answer for that +4; it can still be taken or stacked.
-        }
 
         $active = $state->activeSeats();
         if (count($active) === 1) {
@@ -322,8 +287,7 @@ final class ClassicRules implements UnoRules
         } elseif ($state->currentSeat === $seat) {
             $state->pendingEffect = UnoState::NONE;
             $state->pendingDraw = 0;
-            $state->challenge = null;
-            $state->drawnCard = null;
+                $state->drawnCard = null;
             $this->advance($state, $seat);
         }
         $this->assertConserved($state);
@@ -371,7 +335,6 @@ final class ClassicRules implements UnoRules
         $this->syncUno($state, $seat);
         $state->pendingEffect = UnoState::NONE;
         $state->pendingDraw = 0;
-        $state->challenge = null;
         $this->advance($state, $seat);
     }
 
@@ -489,7 +452,6 @@ final class ClassicRules implements UnoRules
         $state->pendingEffect = UnoState::NONE;
         $state->pendingDraw = 0;
         $state->drawnCard = null;
-        $state->challenge = null;
         $state->unoExposed = null;
     }
 

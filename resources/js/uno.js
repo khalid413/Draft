@@ -11,12 +11,13 @@ const SYMBOLS = { skip: 'Skip', reverse: 'Reverse', draw2: 'Draw Two' };
 // Where opponents sit around the oval, in seat order starting at your left.
 const SEATS = { 1: ['top'], 2: ['left', 'right'], 3: ['left', 'top', 'right'], 4: ['left', 'top-left', 'top-right', 'right'], 5: ['left', 'top-left', 'top', 'top-right', 'right'] };
 // UNO moves in which cards travel from the pile to a seat, translated for the shared card-flight animation.
-const GAME_ACTIONS = ['play', 'draw', 'pass', 'accept', 'challenge', 'uno', 'catch'];
+const GAME_ACTIONS = ['play', 'draw', 'pass', 'accept', 'uno', 'catch'];
+const STACKING = { off: 'Official: no stacking', same: 'Stacking: +2 on +2, +4 on +4', mixed: 'Stacking: +2 and +4 on each other' };
 
 // Display-only client: every card, turn and ranking shown here comes from the server's view of this seat.
 export default (variant = 'classic') => ({
     variant, colors: COLORS, screen: 'home', loading: true, busy: false, error: '',
-    room: null, stopWatch: null, form: { name: '', capacity: 4, stacking: false, code: '', joinName: '' },
+    room: null, stopWatch: null, form: { name: '', capacity: 4, stacking: 'off', code: '', joinName: '' },
     colorPicker: null, toasts: [], seenMove: null, copied: '', playedFrom: {},
     animating: false, queued: null, launching: null, soundOn: sound.on, turnShown: null, later: [],
 
@@ -35,9 +36,6 @@ export default (variant = 'classic') => ({
         if (!game || game.status !== 'PLAYING') return '';
         if (this.me?.status === 'FINISHED') return t('You finished :rank. Watching :name.', { rank: ordinal(this.me.rank), name: this.currentName });
         if (!this.me?.isTurn) return t(':name is playing…', { name: this.currentName });
-        if (this.me.canChallenge) return game.stacking
-            ? t('+:count for you! Stack a +4, challenge it, or take the cards.', { count: game.pending.draw })
-            : t('+:count for you! Challenge the +4, or take the cards.', { count: game.pending.draw });
         if (game.pending.effect !== 'NONE') return t('+:count for you! Stack a card, or take them.', { count: game.pending.draw });
         if (this.me.canPass) return t('You drew a playable card. Play it, or keep it and pass.');
         if (!game.hand.some(card => card.playable)) return t('No playable card. Draw one from the pile.');
@@ -48,7 +46,7 @@ export default (variant = 'classic') => ({
         return !pending || pending.effect === 'NONE' ? '' : t('+:count pending', { count: pending.draw });
     },
     get modeText() { return this.stackingText(this.game ? this.game.stacking : this.room?.settings.stacking); },
-    stackingText(stacking) { return stacking ? t('House rule: stacking on') : t('Official: no stacking'); },
+    stackingText(mode) { return t(STACKING[mode] || STACKING.off); },
     colorName(color) { return color ? t(COLOR_NAMES[color]) : ''; },
     cardLabel(card) {
         if (card.value === 'wild') return t('Wild');
@@ -164,7 +162,7 @@ export default (variant = 'classic') => ({
         });
     },
     toggleSound() { this.soundOn = sound.toggle(); },
-    // Short notices for what happened since the last update: UNO calls, catches, challenges, finishes.
+    // Short notices for what happened since the last update: UNO calls, catches, finishes.
     announce(room) {
         const moves = room.game?.recent || [];
         const last = moves.length ? moves[moves.length - 1].id : null;
@@ -178,8 +176,6 @@ export default (variant = 'classic') => ({
                 accept_draw: mine ? tn('You drew :count penalty card.|You drew :count penalty cards.', move.amount) : tn(':name drew :count penalty card.|:name drew :count penalty cards.', move.amount, { name }),
                 uno: mine ? t('You called UNO!') : t(':name calls UNO!', { name }),
                 caught: mine ? t(':other caught you without UNO: +2 cards.', { other }) : t(':other caught :name without UNO: +2 cards.', { name, other }),
-                challenge_won: mine ? t('Challenge won! :other was bluffing and draws :count.', { other, count: move.amount }) : t(':name challenged :other and won: :other draws :count.', { name, other, count: move.amount }),
-                challenge_lost: mine ? t('Challenge lost: the +4 was legal. You draw :count.', { count: move.amount }) : t(':name challenged :other and lost: :name draws :count.', { name, other, count: move.amount }),
                 forfeit: mine ? '' : t(':name left the table and forfeits.', { name }),
                 reshuffle: t('The discard pile was reshuffled into the deck.'),
             }[move.type];

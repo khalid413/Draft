@@ -33,7 +33,7 @@ class UnoRoomTest extends TestCase
         return $this->withSession(['room_tokens' => $this->seats[$index] ?? []]);
     }
 
-    private function table(int $players = 3, bool $stacking = false, bool $start = true): array
+    private function table(int $players = 3, string $stacking = 'off', bool $start = true): array
     {
         $room = $this->postJson('/uno/rooms', ['name' => 'Host', 'capacity' => $players, 'variant' => 'classic', 'stacking' => $stacking])->assertOk()->json();
         $this->seats[0] = session('room_tokens');
@@ -82,7 +82,7 @@ class UnoRoomTest extends TestCase
     }
 
     /** Rewrites the running match so a test can start from an exact position. */
-    private function arrange(array $room, array $hands, string $top, int $current, bool $stacking = false): array
+    private function arrange(array $room, array $hands, string $top, int $current): array
     {
         $game = UnoGame::first();
         $store = app(UnoStore::class);
@@ -103,7 +103,7 @@ class UnoRoomTest extends TestCase
 
     public function test_a_full_match_over_http_ranks_everyone_and_never_leaks_hidden_cards(): void
     {
-        foreach ([false, true] as $stacking) {
+        foreach (['off', 'same', 'mixed'] as $stacking) {
             $this->seats = [];
             UnoGame::query()->delete();
             $room = $this->table(4, $stacking);
@@ -149,7 +149,6 @@ class UnoRoomTest extends TestCase
         $this->send($room, 0, 'play', ['card' => 'wild_1', 'color' => 'purple'])->assertUnprocessable()->assertJsonValidationErrors('color');
         $this->send($room, 0, 'catch', ['target' => 1])->assertUnprocessable();
         $this->send($room, 0, 'pass')->assertUnprocessable();
-        $this->send($room, 0, 'challenge')->assertUnprocessable();
         $this->seat(0)->postJson('/uno/rooms/'.$room['id'].'/play', ['card' => 'red_1_1', 'version' => $room['version']])->assertUnprocessable()->assertJsonValidationErrors('actionId');
         $this->seat(9)->getJson('/uno/rooms/'.$room['id'])->assertForbidden();
         $this->seat(0)->postJson('/uno/rooms/'.$room['id'].'/draw', ['version' => $room['version'] - 1, 'actionId' => (string) Str::uuid()])->assertUnprocessable()->assertJsonPath('message', 'The table changed. Please try again.');
@@ -167,44 +166,48 @@ class UnoRoomTest extends TestCase
         $this->assertSame(1, UnoMove::where('type', 'play')->count());
     }
 
-    public function test_uno_catch_and_challenge_over_http(): void
+    public function test_uno_catch_and_mixed_stacking_over_http(): void
     {
-        $room = $this->table(3);
-        $room = $this->arrange($room, [['red_1_1', 'red_2_1'], ['wild4_1', 'red_3_1', 'blue_3_1'], ['green_4_1', 'green_5_1']], 'red_9_1', 0);
+        $room = $this->table(3, 'mixed');
+        $room = $this->arrange($room, [['red_1_1', 'red_2_1'], ['wild4_1', 'red_3_1', 'blue_3_1'], ['green_4_1', 'green_draw2_1', 'yellow_5_1']], 'red_9_1', 0);
         // Seat 0 plays down to one card without calling; seat 2 sees the catch button and uses it.
         $room = $this->send($room, 0, 'play', ['card' => 'red_1_1'])->assertOk()->json();
         $this->assertTrue($this->peek($room, 2)['game']['players'][0]['catchable']);
         $this->assertTrue($this->peek($room, 0)['game']['you']['exposed']);
         $room = $this->send($room, 2, 'catch', ['target' => 0])->assertOk()->json();
         $this->assertSame(3, $room['game']['players'][0]['cards']);
-        // Seat 1 bluffs a +4 while holding red; seat 2 challenges and wins.
+        // Seat 1 plays a +4; seat 2 answers it with a +2; seat 0 (who could stack again) takes all six instead.
         $room = $this->send($room, 1, 'play', ['card' => 'wild4_1', 'color' => 'green'])->assertOk()->json();
         $target = $this->peek($room, 2)['game'];
-        $this->assertTrue($target['you']['canChallenge']);
         $this->assertSame(['effect' => 'DRAW_FOUR', 'draw' => 4], $target['pending']);
-        $room = $this->send($room, 2, 'challenge')->assertOk()->json();
-        $this->assertSame(6, $room['game']['players'][1]['cards']);
-        $this->assertSame(2, $room['game']['currentSeat']);
-        $this->assertSame('challenge_won', UnoMove::latest('id')->first()->type);
+        $this->assertSame(['green_draw2_1'], array_column(array_filter($target['hand'], fn ($card) => $card['playable']), 'id'));
+        $this->assertArrayNotHasKey('canChallenge', $target['you']);
+        $room = $this->send($this->peek($room, 2), 2, 'play', ['card' => 'green_draw2_1'])->assertOk()->json();
+        $this->assertSame(['effect' => 'DRAW_TWO', 'draw' => 6], $room['game']['pending']);
+        $this->assertSame(0, $room['game']['currentSeat']);
+        $room = $this->send($this->peek($room, 0), 0, 'accept')->assertOk()->json();
+        $this->assertCount(9, $room['game']['hand']);
+        $this->assertSame(1, $room['game']['currentSeat']);
     }
 
     public function test_stacking_is_chosen_by_the_host_shown_to_everyone_and_locked_at_the_deal(): void
     {
-        $room = $this->table(2, stacking: false, start: false);
-        $this->assertFalse($room['settings']['stacking']);
-        $this->send($room, 1, 'settings', ['stacking' => true])->assertForbidden();
-        $room = $this->send($room, 0, 'settings', ['stacking' => true])->assertOk()->json();
-        $this->assertTrue($room['settings']['stacking']);
-        $this->assertTrue($this->peek($room, 1)['settings']['stacking']);
-        $this->assertTrue(Room::find($room['id'])->settings['stacking'], 'Persisted with the room.');
+        $room = $this->table(2, 'off', start: false);
+        $this->assertSame('off', $room['settings']['stacking']);
+        $this->send($room, 1, 'settings', ['stacking' => 'mixed'])->assertForbidden();
+        $this->send($room, 0, 'settings', ['stacking' => 'sometimes'])->assertUnprocessable()->assertJsonValidationErrors('stacking');
+        $room = $this->send($room, 0, 'settings', ['stacking' => 'mixed'])->assertOk()->json();
+        $this->assertSame('mixed', $room['settings']['stacking']);
+        $this->assertSame('mixed', $this->peek($room, 1)['settings']['stacking']);
+        $this->assertSame('mixed', Room::find($room['id'])->settings['stacking'], 'Persisted with the room.');
         foreach ([0, 1] as $index) {
             $room = $this->send($room, $index, 'ready', ['ready' => true])->assertOk()->json();
         }
         $room = $this->send($room, 0, 'start')->assertOk()->json();
-        $this->assertTrue($room['game']['stacking']);
-        $this->assertTrue(UnoGame::first()->stacking);
-        $this->send($room, 0, 'settings', ['stacking' => false])->assertUnprocessable()->assertJsonPath('message', 'Rules are locked once the cards are dealt.');
-        $this->postJson('/uno/rooms', ['name' => 'X', 'capacity' => 2, 'variant' => 'flip', 'stacking' => false])->assertUnprocessable()->assertJsonValidationErrors('variant');
+        $this->assertSame('mixed', $room['game']['stacking']);
+        $this->assertSame('mixed', UnoGame::first()->stacking);
+        $this->send($room, 0, 'settings', ['stacking' => 'off'])->assertUnprocessable()->assertJsonPath('message', 'Rules are locked once the cards are dealt.');
+        $this->postJson('/uno/rooms', ['name' => 'X', 'capacity' => 2, 'variant' => 'flip', 'stacking' => 'off'])->assertUnprocessable()->assertJsonValidationErrors('variant');
     }
 
     public function test_reconnecting_restores_the_seat_and_leaving_forfeits(): void

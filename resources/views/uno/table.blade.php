@@ -30,8 +30,9 @@
                     <fieldset><legend>{{ __('Seats') }}</legend><div class="carta-seat-options"><template x-for="n in [2,3,4,5,6]" :key="n"><button type="button" :class="{ selected: form.capacity === n }" :aria-pressed="form.capacity === n" @click="form.capacity = n" x-text="n"></button></template></div></fieldset>
                     <fieldset><legend>{{ __('+2 and +4 stacking') }}</legend>
                         <div class="uno-mode-options">
-                            <button type="button" :class="{ selected: !form.stacking }" :aria-pressed="!form.stacking" @click="form.stacking = false"><b>{{ __('Official') }}</b><small>{{ __('No stacking. A +2 or +4 is always taken.') }}</small></button>
-                            <button type="button" :class="{ selected: form.stacking }" :aria-pressed="form.stacking" @click="form.stacking = true"><b>{{ __('House rule') }}</b><small>{{ __('Stack +2 on +2 and +4 on +4.') }}</small></button>
+                            <button type="button" :class="{ selected: form.stacking === 'off' }" :aria-pressed="form.stacking === 'off'" @click="form.stacking = 'off'"><b>{{ __('Official') }}</b><small>{{ __('No stacking. A +2 or +4 is always taken.') }}</small></button>
+                            <button type="button" :class="{ selected: form.stacking === 'same' }" :aria-pressed="form.stacking === 'same'" @click="form.stacking = 'same'"><b>{{ __('Same cards') }}</b><small>{{ __('Stack +2 on +2 and +4 on +4.') }}</small></button>
+                            <button type="button" :class="{ selected: form.stacking === 'mixed' }" :aria-pressed="form.stacking === 'mixed'" @click="form.stacking = 'mixed'"><b>{{ __('Everything') }}</b><small>{{ __('+2 and +4 stack on each other.') }}</small></button>
                         </div>
                     </fieldset>
                     <button class="carta-primary" :disabled="busy"><span x-text="busy ? t('Opening…') : t('Create table')"></span><i data-icon="arrow-right"></i></button>
@@ -56,8 +57,9 @@
                 <span class="carta-eyebrow">{{ __('RULES') }}</span>
                 <template x-if="room?.isHost">
                     <div class="uno-mode-options">
-                        <button type="button" :class="{ selected: !room.settings.stacking }" :aria-pressed="!room.settings.stacking" :disabled="busy" @click="room.settings.stacking && act('settings', { stacking: false })"><b>{{ __('Official') }}</b><small>{{ __('No stacking. A +2 or +4 is always taken.') }}</small></button>
-                        <button type="button" :class="{ selected: room.settings.stacking }" :aria-pressed="room.settings.stacking" :disabled="busy" @click="!room.settings.stacking && act('settings', { stacking: true })"><b>{{ __('House rule') }}</b><small>{{ __('Stack +2 on +2 and +4 on +4.') }}</small></button>
+                        <button type="button" :class="{ selected: room.settings.stacking === 'off' }" :aria-pressed="room.settings.stacking === 'off'" :disabled="busy" @click="room.settings.stacking !== 'off' && act('settings', { stacking: 'off' })"><b>{{ __('Official') }}</b><small>{{ __('No stacking. A +2 or +4 is always taken.') }}</small></button>
+                        <button type="button" :class="{ selected: room.settings.stacking === 'same' }" :aria-pressed="room.settings.stacking === 'same'" :disabled="busy" @click="room.settings.stacking !== 'same' && act('settings', { stacking: 'same' })"><b>{{ __('Same cards') }}</b><small>{{ __('Stack +2 on +2 and +4 on +4.') }}</small></button>
+                        <button type="button" :class="{ selected: room.settings.stacking === 'mixed' }" :aria-pressed="room.settings.stacking === 'mixed'" :disabled="busy" @click="room.settings.stacking !== 'mixed' && act('settings', { stacking: 'mixed' })"><b>{{ __('Everything') }}</b><small>{{ __('+2 and +4 stack on each other.') }}</small></button>
                     </div>
                 </template>
                 <p x-show="!room?.isHost" class="uno-mode-read"><i data-icon="layers"></i><span x-text="modeText"></span></p>
@@ -134,9 +136,8 @@
 
             <div class="carta-seat-me" :class="{ turn: me?.isTurn && game.status === 'PLAYING' }">
                 {{-- Above your hand, so the fanned cards can never cover them. --}}
-                <div x-show="me?.canAccept || me?.canChallenge || me?.canPass || me?.canCallUno" class="carta-actions">
+                <div x-show="me?.canAccept || me?.canPass || me?.canCallUno" class="carta-actions">
                     <button x-show="me?.canCallUno" class="uno-call" @click="act('uno')" :disabled="busy || animating" :class="{ late: me?.exposed }">{{ __('UNO!') }}</button>
-                    <button x-show="me?.canChallenge" class="carta-secondary uno-challenge" @click="act('challenge')" :disabled="busy || animating"><i data-icon="shield-exclamation"></i> {{ __('Challenge the +4') }}</button>
                     <button x-show="me?.canAccept" class="carta-danger" @click="act('accept')" :disabled="busy || animating" x-text="tn('Take :count card|Take :count cards', game.pending.draw)"></button>
                     <button x-show="me?.canPass" class="carta-secondary" @click="act('pass')" :disabled="busy || animating">{{ __('Keep it and pass') }}</button>
                 </div>
