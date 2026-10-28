@@ -1,7 +1,7 @@
 import { gameClient } from './gameClient';
 import { renderIcons } from './icons';
 import { t, tn, ordinal } from './i18n';
-import { playMoves, dealCards, banner } from './unoMotion';
+import { playMoves, dealCards, banner, throwCard, returnCard } from './unoMotion';
 import { sound } from './unoSound';
 
 const ROOM_KEY = 'uno-room-id';
@@ -18,8 +18,8 @@ const STACKING = { off: 'Official: no stacking', same: 'Stacking: +2 on +2, +4 o
 export default (variant = 'classic') => ({
     variant, colors: COLORS, screen: 'home', loading: true, busy: false, error: '',
     room: null, stopWatch: null, form: { name: '', capacity: 4, stacking: 'off', code: '', joinName: '' },
-    colorPicker: null, toasts: [], seenMove: null, copied: '', playedFrom: {},
-    animating: false, queued: null, launching: null, soundOn: sound.on, turnShown: null, later: [],
+    colorPicker: null, toasts: [], seenMove: null, copied: '', ownFlights: {},
+    animating: false, queued: null, soundOn: sound.on, turnShown: null, later: [],
 
     get game() { return this.room?.game || null; },
     get me() { return this.game?.you || null; },
@@ -40,6 +40,16 @@ export default (variant = 'classic') => ({
         if (this.me.canPass) return t('You drew a playable card. Play it, or keep it and pass.');
         if (!game.hand.some(card => card.playable)) return t('No playable card. Draw one from the pile.');
         return t('Your turn. Match the colour, number or symbol, or draw.');
+    },
+    // The cards played before the top one stay visible underneath, so a new card lands on a pile, not on an empty spot.
+    get underCards() {
+        const played = (this.game?.recent || []).filter(move => (move.type === 'play' || move.type === 'deal') && move.card).map(move => ({ ...move.card, key: move.id }));
+        return played.slice(-4, -1);
+    },
+    // A loose, stable tilt per card, so the pile looks thrown but does not shuffle on every update.
+    underStyle(card, index) {
+        const seed = [...card.id].reduce((sum, char) => sum * 31 + char.charCodeAt(0), 7) >>> 0;
+        return `--r:${(seed % 25) - 12}deg;--x:${(seed >> 5) % 9 - 4}px;--y:${(seed >> 9) % 7 - 3}px;z-index:${index}`;
     },
     get pendingText() {
         const pending = this.game?.pending;
@@ -139,7 +149,7 @@ export default (variant = 'classic') => ({
             const root = document.querySelector('.carta-stage');
             try {
                 if (dealing) await dealCards({ root, game: room.game, viewer: room.viewerIndex });
-                else if (fresh.length) await playMoves({ root, moves: fresh, game: room.game, viewer: room.viewerIndex, playedFrom: this.playedFrom, newCards });
+                else if (fresh.length) await playMoves({ root, moves: fresh, game: room.game, viewer: room.viewerIndex, ownFlights: this.ownFlights, newCards });
             } catch {} // Presentation only: a failed animation must never freeze the table.
             // Notices follow the animation, so they never give away a move before it is seen.
             notices.forEach(([text, kind]) => this.notify(text, kind));
@@ -153,8 +163,8 @@ export default (variant = 'classic') => ({
                     await banner(root, t('Your turn'), room.game.activeColor, { duration: 900, small: true });
                 }
             } catch {} // Presentation only: a failed animation must never freeze the table.
-            this.playedFrom = {};
-            this.launching = null;
+            // Only the flights this batch used are spent; a refresh that arrived mid-throw must not drop yours.
+            this.ownFlights = Object.fromEntries(Object.entries(this.ownFlights).filter(([id]) => !fresh.some(move => move.card?.id === id)));
             this.animating = false;
             const next = this.queued;
             this.queued = null;
@@ -222,23 +232,25 @@ export default (variant = 'classic') => ({
     },
     play(card) {
         if (!card.playable || this.busy || this.animating) return;
-        // Remember where the card was, so it flies from the hand to the pile once the server accepts it.
-        const rect = document.querySelector(`[data-card="${card.id}"]`)?.getBoundingClientRect();
-        if (rect) this.playedFrom = { [card.id]: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
         // A wild that is your last card needs no colour: the match is over for you.
         if ((card.value === 'wild' || card.value === 'wild4') && this.game.hand.length > 1) { this.colorPicker = card.id; return; }
-        this.launch(card.id, { card: card.id });
+        this.launch(card, { card: card.id });
     },
     async chooseColor(color) {
-        const card = this.colorPicker;
+        const card = this.game?.hand.find(item => item.id === this.colorPicker);
         this.colorPicker = null;
-        if (card) await this.launch(card, { card, color });
+        if (card) await this.launch(card, { card: card.id, color });
     },
-    // The chosen card rises out of the hand at once, so the click feels answered while the server confirms it.
-    async launch(id, payload) {
-        this.launching = id;
-        sound.play('flick');
-        if (!(await this.act('play', payload))) this.launching = null;
+    // One motion from hand to pile: the card is thrown the moment you tap it, while the server confirms the play.
+    // If the server refuses it, the card glides back into your hand.
+    async launch(card, payload) {
+        const el = document.querySelector(`[data-card="${card.id}"]`);
+        const flight = throwCard({ root: document.querySelector('.carta-stage'), el, face: card.image, back: this.game.back });
+        this.ownFlights = { [card.id]: flight };
+        if (!(await this.act('play', payload))) {
+            this.ownFlights = {};
+            await returnCard(flight, document.querySelector(`[data-card="${card.id}"]`) || el);
+        }
     },
     async leave() {
         if (await this.act('leave')) this.forget();

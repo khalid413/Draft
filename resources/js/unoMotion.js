@@ -67,7 +67,6 @@ async function slam(root, value) {
     const step = i => `translate(${(i % 2 ? -1 : 1) * amount * (1 - i / 7)}px, ${(i % 3 - 1) * amount * .5 * (1 - i / 7)}px)`;
     felt?.animate([{ transform: 'translate(0, 0)' }, ...Array.from({ length: 6 }, (_, i) => ({ transform: step(i) })), { transform: 'translate(0, 0)' }],
         { duration: 260 + amount * 12, easing: 'linear' });
-    if (amount >= 7 && navigator.userActivation?.hasBeenActive) navigator.vibrate?.(amount * 4); // phones only, after the player has touched the page
 }
 
 /** A big +N over the player who has to draw, counting down as each card arrives. */
@@ -171,10 +170,10 @@ const EFFECTS = { skip: '⊘', reverse: '⇄', draw2: '+2', wild4: '+4' };
  * @param {Array} o.moves           moves new since the last update, oldest first
  * @param {object} o.game           the table after those moves
  * @param {number} o.viewer         the viewer's seat
- * @param {object} o.playedFrom     card id → box captured when the viewer clicked it
+ * @param {object} o.ownFlights     card id → flight already thrown when the viewer tapped it (see throwCard)
  * @param {Array} o.newCards        ids of cards that entered the viewer's hand in this batch, in arrival order
  */
-export async function playMoves({ root, moves, game, viewer, playedFrom = {}, newCards = [] }) {
+export async function playMoves({ root, moves, game, viewer, ownFlights = {}, newCards = [] }) {
     if (!root || !moves.length) return;
     const discard = root.querySelector('.carta-pile.discard');
     const top = discard?.querySelector('.carta-top');
@@ -188,7 +187,8 @@ export async function playMoves({ root, moves, game, viewer, playedFrom = {}, ne
     arriving.forEach(card => { card.style.visibility = 'hidden'; });
     const parked = [];
     const revealAll = () => { if (top) top.style.visibility = ''; arriving.forEach(card => { card.style.visibility = ''; }); parked.forEach(card => card.remove()); };
-    if (reduced()) { revealAll(); return; }
+    // No motion (hidden tab, reduced motion): a card you already threw just leaves the table.
+    if (reduced()) { revealAll(); Object.values(ownFlights).forEach(flight => flight?.then(card => card?.remove())); return; }
 
     try {
         const batch = moves.slice(-6);
@@ -196,10 +196,14 @@ export async function playMoves({ root, moves, game, viewer, playedFrom = {}, ne
             const finishes = batch.slice(index + 1).some(next => next.type === 'finish' && next.seat === move.seat);
             if (move.type === 'play' && move.card) {
                 const mine = move.seat === viewer;
-                const from = (mine && playedFrom[move.card.id]) || seatBox(move.seat);
-                const to = plain(rectOf(discard));
-                sound.play('flick');
-                const card = await fly({ face: move.card.image, back: game.back, from, to, flip: !mine, spin: mine ? 8 : -24, settle: -3, lift: mine ? 110 : 60, anticipate: true });
+                let card;
+                if (mine && ownFlights[move.card.id]) {
+                    // Your card left the hand the moment you tapped it; it has landed (or is about to) on the pile.
+                    card = await ownFlights[move.card.id];
+                } else {
+                    sound.play('flick');
+                    card = await fly({ face: move.card.image, back: game.back, from: seatBox(move.seat), to: plain(rectOf(discard)), flip: !mine, spin: mine ? 0 : -24, settle: -3, lift: mine ? 110 : 60, anticipate: !mine });
+                }
                 sound.play('land');
                 const color = move.color || move.card.color;
                 if (move === lastPlay) { if (top) top.style.visibility = ''; card?.remove(); } else if (card) parked.push(card);
@@ -239,6 +243,32 @@ export async function playMoves({ root, moves, game, viewer, playedFrom = {}, ne
     } finally {
         revealAll();
     }
+}
+
+/**
+ * Your play, in one motion: the tapped card leaves the hand straight away and arcs onto the pile while the server confirms it.
+ * Resolves with the landed card, which stays on the pile until the confirmed table takes over (or returnCard sends it back).
+ */
+export function throwCard({ root, el, face, back }) {
+    const from = rectOf(el), to = plain(rectOf(root?.querySelector('.carta-pile.discard')));
+    if (!from || !to || reduced()) return Promise.resolve(null);
+    const spin = parseFloat(getComputedStyle(el).getPropertyValue('--rot')) || 0;
+    el.style.visibility = 'hidden';
+    sound.play('flick');
+    return fly({ face, back, from: plain(from), to, spin, settle: -3, lift: 110, bounce: true });
+}
+
+/** The server refused the play: the card glides back into its place in the hand. */
+export async function returnCard(flight, el) {
+    const card = await flight;
+    const home = rectOf(el), here = rectOf(card);
+    if (card && home && here) {
+        const motion = card.animate([{ transform: getComputedStyle(card).transform }, { transform: `translate(${center(home).x - center(here).x}px, ${center(home).y - center(here).y}px) scale(${home.width / here.width})` }],
+            { duration: 380, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
+        await new Promise(resolve => { motion.onfinish = resolve; setTimeout(resolve, 600); });
+    }
+    card?.remove();
+    if (el) el.style.visibility = '';
 }
 
 /** The opening deal: one card at a time around the table, seven rounds, then the first card turns over. */

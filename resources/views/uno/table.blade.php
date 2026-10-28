@@ -110,7 +110,7 @@
                             <div class="carta-pile-label"><b>{{ __('Draw pile') }}</b><span x-text="tn(':count card|:count cards', game.drawCount)"></span></div>
                         </div>
                         <div class="carta-pile-wrap">
-                            <div class="carta-pile discard" aria-live="polite" :aria-label="`{{ __('Discard pile') }}: ${cardLabel(game.top)}`"><template x-for="card in [game.top]" :key="game.discardCount"><img :src="card.image" :alt="cardLabel(card)" class="carta-top"></template></div>
+                            <div class="carta-pile discard" aria-live="polite" :aria-label="`{{ __('Discard pile') }}: ${cardLabel(game.top)}`"><template x-for="(card, i) in underCards" :key="card.key"><img :src="card.image" alt="" class="uno-under" :style="underStyle(card, i)"></template><template x-for="card in [game.top]" :key="game.discardCount"><img :src="card.image" :alt="cardLabel(card)" class="carta-top"></template></div>
                         </div>
                         <div class="uno-color-panel" :class="'uno-color-' + game.activeColor" role="group" aria-label="{{ __('Active colour') }}">
                             <template x-for="color in [game.activeColor]" :key="color"><span class="uno-color-dot" aria-hidden="true"></span></template>
@@ -142,7 +142,7 @@
                     <button x-show="me?.canPass" class="carta-secondary" @click="act('pass')" :disabled="busy || animating">{{ __('Keep it and pass') }}</button>
                 </div>
                 <div class="carta-hand" :style="`--n:${Math.max(1, game.hand.length)}`">
-                    <template x-for="(card, index) in game.hand" :key="card.id"><button class="carta-card" :data-card="card.id" :class="{ playable: card.playable, drawn: card.drawn, launching: launching === card.id }" :style="fanStyle(index, game.hand.length, 6)" :disabled="!card.playable || busy || animating" @click="play(card)" :aria-label="card.playable ? t('Play :card', { card: cardLabel(card) }) : cardLabel(card)"><img :src="card.image" :alt="cardLabel(card)"></button></template>
+                    <template x-for="(card, index) in game.hand" :key="card.id"><button class="carta-card" :data-card="card.id" :class="{ playable: card.playable, drawn: card.drawn }" :style="fanStyle(index, game.hand.length, 6)" :disabled="!card.playable || busy || animating" @click="play(card)" :aria-label="card.playable ? t('Play :card', { card: cardLabel(card) }) : cardLabel(card)"><img :src="card.image" :alt="cardLabel(card)"></button></template>
                     <p x-show="me && me.status !== 'ACTIVE' && game.status === 'PLAYING'" class="carta-spectate">{{ __('You are out of cards. Watching the others play it out.') }}</p>
                 </div>
                 <div class="carta-chip me">
