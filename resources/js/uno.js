@@ -20,6 +20,7 @@ export default (variant = 'classic') => ({
     room: null, stopWatch: null, form: { name: '', capacity: 4, stacking: 'off', code: '', joinName: '' },
     colorPicker: null, toasts: [], seenMove: null, copied: '', ownFlights: {},
     animating: false, queued: null, soundOn: sound.on, turnShown: null, later: [],
+    settingsOpen: false, draft: { capacity: 4, stacking: 'off' }, kickConfirm: null, homeTab: 'create',
 
     get game() { return this.room?.game || null; },
     get me() { return this.game?.you || null; },
@@ -101,7 +102,7 @@ export default (variant = 'classic') => ({
     async init() {
         const invite = new URLSearchParams(location.search).get('join');
         let saved = null; try { saved = sessionStorage.getItem(ROOM_KEY); } catch {}
-        if (invite) { this.form.code = invite.toUpperCase(); }
+        if (invite) { this.form.code = invite.toUpperCase(); this.homeTab = 'join'; }
         else if (saved) {
             try { await this.enter(await gameClient.uno.room(saved)); }
             catch { this.forget(); }
@@ -251,6 +252,32 @@ export default (variant = 'classic') => ({
             this.ownFlights = {};
             await returnCard(flight, document.querySelector(`[data-card="${card.id}"]`) || el);
         }
+    },
+    // Host settings window: edits a draft, saved in one go; removing a player asks for a second tap.
+    openSettings() {
+        this.draft = { capacity: this.room.settings.capacity, stacking: this.room.settings.stacking };
+        this.kickConfirm = null;
+        this.settingsOpen = true;
+        this.$nextTick(renderIcons);
+    },
+    get settingsChanged() {
+        return this.draft.capacity !== this.room?.settings.capacity || this.draft.stacking !== this.room?.settings.stacking;
+    },
+    async saveSettings() {
+        const changes = {};
+        if (this.draft.capacity !== this.room.settings.capacity) changes.capacity = this.draft.capacity;
+        if (this.draft.stacking !== this.room.settings.stacking) changes.stacking = this.draft.stacking;
+        if (await this.act('settings', changes)) this.settingsOpen = false;
+    },
+    async kick(seat) {
+        if (this.kickConfirm !== seat) {
+            this.kickConfirm = seat;
+            setTimeout(() => { if (this.kickConfirm === seat) this.kickConfirm = null; }, 3000);
+            return;
+        }
+        this.kickConfirm = null;
+        const name = this.members[seat]?.name;
+        if (await this.act('kick', { target: seat })) this.notify(t(':name was removed from the table.', { name }), 'forfeit');
     },
     async leave() {
         if (await this.act('leave')) this.forget();

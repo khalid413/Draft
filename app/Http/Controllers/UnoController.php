@@ -75,11 +75,12 @@ class UnoController extends Controller
     {
         $this->unoRoom($room);
         $request->validate(['version' => 'required|integer|min:0', 'ready' => 'sometimes|boolean',
-            'stacking' => [$action === 'settings' ? 'required' : 'prohibited', 'in:'.implode(',', UnoState::STACKING)],
+            'stacking' => [$action === 'settings' ? 'sometimes' : 'prohibited', 'in:'.implode(',', UnoState::STACKING)],
+            'capacity' => [$action === 'settings' ? 'sometimes' : 'prohibited', 'integer', 'between:2,6'],
             'actionId' => [in_array($action, self::GAME_ACTIONS, true) ? 'required' : 'sometimes', 'uuid'],
             'card' => [$action === 'play' ? 'required' : 'prohibited', 'string', 'max:20'],
             'color' => ['sometimes', 'nullable', 'in:'.implode(',', UnoCard::COLORS)],
-            'target' => [$action === 'catch' ? 'required' : 'prohibited', 'integer', 'between:0,5']]);
+            'target' => [in_array($action, ['catch', 'kick'], true) ? 'required' : 'prohibited', 'integer', 'between:0,5']]);
 
         [$room, $index] = DB::transaction(function () use ($request, $room, $action) {
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
@@ -94,7 +95,8 @@ class UnoController extends Controller
             }
             match ($action) {
                 'ready' => $this->lobby->setReady($room, $index, $request->boolean('ready')),
-                'settings' => $this->settings($room, $index, $request->input('stacking')),
+                'settings' => $this->settings($room, $index, $request->input('stacking'), $request->input('capacity')),
+                'kick' => $this->kick($room, $index, $request->integer('target'), $game),
                 'start' => $this->start($room, $index),
                 'rematch' => $this->lobby->rematch($room),
                 'leave' => $this->leave($room, $index, $game),
@@ -120,16 +122,38 @@ class UnoController extends Controller
         return UnoVariants::get($room->settings['variant'])->rules();
     }
 
-    /** The host picks the stacking rule in the lobby; it is copied onto the match at the deal and locked from then on. */
-    private function settings(Room $room, int $index, string $stacking): void
+    /**
+     * The host's room settings: seats and the stacking rule. Both are lobby-only; the rule is copied onto the match
+     * at the deal and locked from then on. Seats can never drop below the players already sitting.
+     */
+    private function settings(Room $room, int $index, ?string $stacking, mixed $capacity): void
     {
         abort_unless($index === $room->host, 403);
         if ($room->status !== 'lobby') {
             throw new DomainException(__('Rules are locked once the cards are dealt.'));
         }
-        $room->settings = [...$room->settings, 'stacking' => $stacking];
-        // Everyone confirms again under the new rule.
-        $room->members = array_map(fn ($member) => [...$member, 'ready' => false], $room->members);
+        if ($capacity !== null) {
+            if ((int) $capacity < count($room->members)) {
+                throw new DomainException(__('Remove a player before taking their seat away.'));
+            }
+            $room->settings = [...$room->settings, 'capacity' => (int) $capacity];
+        }
+        if ($stacking !== null && $stacking !== UnoState::stackingOf($room->settings['stacking'])) {
+            $room->settings = [...$room->settings, 'stacking' => $stacking];
+            // Everyone confirms again under the new rule.
+            $room->members = array_map(fn ($member) => [...$member, 'ready' => false], $room->members);
+        }
+    }
+
+    /** The host removes a player: in the lobby the seat frees up; mid-match it counts as leaving (a forfeit). */
+    private function kick(Room $room, int $index, int $target, ?UnoGame $game): void
+    {
+        abort_unless($index === $room->host, 403);
+        if ($target === $index || ! isset($room->members[$target]) || ($room->members[$target]['left'] ?? false)) {
+            throw new DomainException(__('That player is not at the table.'));
+        }
+        $room->settings = [...$room->settings, 'kicked' => [...($room->settings['kicked'] ?? []), $room->members[$target]['token_hash']]];
+        $this->leave($room, $target, $game);
     }
 
     private function start(Room $room, int $index): void

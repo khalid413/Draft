@@ -23,25 +23,21 @@
                 <p>{{ __('Match the colour, number or symbol. Skip, Reverse and +2 change the game; Wild cards pick the colour. Call UNO before your last card. Players finish one by one, and the last one holding cards loses.') }}</p>
                 <div class="carta-hero-cards" aria-hidden="true"><img src="/cards/uno/classic/red_7.png" alt=""><img src="/cards/uno/classic/blue_skip_1.png" alt=""><img src="/cards/uno/classic/wild4_1.png" alt=""></div>
             </div>
-            <div class="carta-forms">
-                <form class="carta-panel" @submit.prevent="createRoom()">
-                    <h2>{{ __('Open a table') }}</h2>
+            {{-- One compact card, two tabs; invitation links open straight on "Join". Rules are set later, in the room's settings. --}}
+            <div class="carta-panel uno-entry">
+                <div class="uno-tabs" role="tablist">
+                    <button type="button" role="tab" id="uno-tab-create" aria-controls="uno-pane-create" :aria-selected="homeTab === 'create'" :class="{ active: homeTab === 'create' }" @click="homeTab = 'create'">{{ __('Create a table') }}</button>
+                    <button type="button" role="tab" id="uno-tab-join" aria-controls="uno-pane-join" :aria-selected="homeTab === 'join'" :class="{ active: homeTab === 'join' }" @click="homeTab = 'join'">{{ __('Join a table') }}</button>
+                </div>
+                <form x-show="homeTab === 'create'" id="uno-pane-create" role="tabpanel" aria-labelledby="uno-tab-create" class="uno-pane" @submit.prevent="createRoom()">
                     <label>{{ __('Your name') }}<input x-model="form.name" required minlength="2" maxlength="20" autocomplete="nickname" placeholder="{{ __('e.g. Khalid') }}"></label>
                     <fieldset><legend>{{ __('Seats') }}</legend><div class="carta-seat-options"><template x-for="n in [2,3,4,5,6]" :key="n"><button type="button" :class="{ selected: form.capacity === n }" :aria-pressed="form.capacity === n" @click="form.capacity = n" x-text="n"></button></template></div></fieldset>
-                    <fieldset><legend>{{ __('+2 and +4 stacking') }}</legend>
-                        <div class="uno-mode-options">
-                            <button type="button" :class="{ selected: form.stacking === 'off' }" :aria-pressed="form.stacking === 'off'" @click="form.stacking = 'off'"><b>{{ __('Official') }}</b><small>{{ __('No stacking. A +2 or +4 is always taken.') }}</small></button>
-                            <button type="button" :class="{ selected: form.stacking === 'same' }" :aria-pressed="form.stacking === 'same'" @click="form.stacking = 'same'"><b>{{ __('Same cards') }}</b><small>{{ __('Stack +2 on +2 and +4 on +4.') }}</small></button>
-                            <button type="button" :class="{ selected: form.stacking === 'mixed' }" :aria-pressed="form.stacking === 'mixed'" @click="form.stacking = 'mixed'"><b>{{ __('Everything') }}</b><small>{{ __('+2 and +4 stack on each other.') }}</small></button>
-                        </div>
-                    </fieldset>
                     <button class="carta-primary" :disabled="busy"><span x-text="busy ? t('Opening…') : t('Create table')"></span><i data-icon="arrow-right"></i></button>
                 </form>
-                <form class="carta-panel" @submit.prevent="joinRoom()">
-                    <h2>{{ __('Join friends') }}</h2>
+                <form x-show="homeTab === 'join'" x-cloak id="uno-pane-join" role="tabpanel" aria-labelledby="uno-tab-join" class="uno-pane" @submit.prevent="joinRoom()">
                     <label>{{ __('Table code') }}<input x-model="form.code" required minlength="8" maxlength="8" autocomplete="off" dir="ltr" placeholder="{{ __('8 letters') }}" class="carta-code-input" @input="form.code = form.code.toUpperCase()"></label>
                     <label>{{ __('Your name') }}<input x-model="form.joinName" required minlength="2" maxlength="20" autocomplete="nickname" placeholder="{{ __('e.g. Salma') }}"></label>
-                    <button class="carta-secondary" :disabled="busy"><span x-text="busy ? t('Joining…') : t('Join table')"></span><i data-icon="arrow-right"></i></button>
+                    <button class="carta-primary" :disabled="busy"><span x-text="busy ? t('Joining…') : t('Join table')"></span><i data-icon="arrow-right"></i></button>
                 </form>
             </div>
         </section>
@@ -52,17 +48,13 @@
             <h1>{{ __('Gather the players.') }}</h1>
             <div class="carta-code-card"><div><span class="carta-eyebrow">{{ __('TABLE CODE') }}</span><strong dir="ltr" x-text="room?.code"></strong></div>
                 <div class="carta-code-actions"><button class="icon-button" :class="{ copied: copied === 'code' }" @click="copy('code')" aria-label="{{ __('Copy table code') }}" title="{{ __('Copy table code') }}"><span x-show="copied !== 'code'"><i data-icon="copy"></i></span><span x-show="copied === 'code'"><i data-icon="check-lg"></i></span></button><button class="icon-button" :class="{ copied: copied === 'link' }" @click="copy('link')" aria-label="{{ __('Copy invite link') }}" title="{{ __('Copy invite link') }}"><span x-show="copied !== 'link'"><i data-icon="share"></i></span><span x-show="copied === 'link'"><i data-icon="check-lg"></i></span></button></div></div>
-            {{-- Stacking rule: the host can change it until the deal; everyone else sees it. --}}
+            {{-- Seats and rules at a glance; the host changes them (and removes players) in the settings window. --}}
             <div class="uno-lobby-mode">
-                <span class="carta-eyebrow">{{ __('RULES') }}</span>
-                <template x-if="room?.isHost">
-                    <div class="uno-mode-options">
-                        <button type="button" :class="{ selected: room.settings.stacking === 'off' }" :aria-pressed="room.settings.stacking === 'off'" :disabled="busy" @click="room.settings.stacking !== 'off' && act('settings', { stacking: 'off' })"><b>{{ __('Official') }}</b><small>{{ __('No stacking. A +2 or +4 is always taken.') }}</small></button>
-                        <button type="button" :class="{ selected: room.settings.stacking === 'same' }" :aria-pressed="room.settings.stacking === 'same'" :disabled="busy" @click="room.settings.stacking !== 'same' && act('settings', { stacking: 'same' })"><b>{{ __('Same cards') }}</b><small>{{ __('Stack +2 on +2 and +4 on +4.') }}</small></button>
-                        <button type="button" :class="{ selected: room.settings.stacking === 'mixed' }" :aria-pressed="room.settings.stacking === 'mixed'" :disabled="busy" @click="room.settings.stacking !== 'mixed' && act('settings', { stacking: 'mixed' })"><b>{{ __('Everything') }}</b><small>{{ __('+2 and +4 stack on each other.') }}</small></button>
-                    </div>
-                </template>
-                <p x-show="!room?.isHost" class="uno-mode-read"><i data-icon="layers"></i><span x-text="modeText"></span></p>
+                <div class="uno-rules-summary">
+                    <span class="carta-eyebrow">{{ __('RULES') }}</span>
+                    <p class="uno-mode-read"><i data-icon="people"></i><span x-text="tn(':count seat|:count seats', room?.settings.capacity || 0)"></span><i data-icon="layers"></i><span x-text="modeText"></span></p>
+                </div>
+                <button x-show="room?.isHost" class="icon-button uno-gear" @click="openSettings()" aria-label="{{ __('Table settings') }}" title="{{ __('Table settings') }}"><i data-icon="gear"></i></button>
             </div>
             <p class="carta-hint" x-text="members.length < 2 ? t('Waiting for at least one more player.') : (everyoneReady ? (room?.isHost ? t('Everyone is ready. Deal the cards!') : t('Everyone is ready. Waiting for the host to deal.')) : t('Waiting for everyone to tap Ready.'))"></p>
             <ul class="carta-seats">
@@ -86,6 +78,7 @@
                 <h2>{{ __('UNO Classic') }}</h2>
                 <div class="carta-hud-code"><span>{{ __('Room:') }} <b dir="ltr" x-text="room.code"></b></span><button class="carta-hud-copy" :class="{ copied: copied === 'code' }" @click="copy('code')" aria-label="{{ __('Copy room code') }}" title="{{ __('Copy room code') }}"><span x-show="copied !== 'code'"><i data-icon="copy"></i></span><span x-show="copied === 'code'"><i data-icon="check-lg"></i></span></button></div>
                 <div class="carta-hud-line uno-hud-mode"><i data-icon="layers"></i><span x-text="modeText"></span></div>
+                <button x-show="room.isHost" class="icon-button uno-gear uno-gear-hud" @click="openSettings()" aria-label="{{ __('Table settings') }}" title="{{ __('Table settings') }}"><i data-icon="gear"></i></button>
             </div>
             <div class="carta-hud carta-hud-status">
                 <strong x-text="statusTitle"></strong>
@@ -170,6 +163,39 @@
             </div>
         </div>
 
+        {{-- Table settings (host): seats and stacking before the deal, removing players at any time --}}
+        <div x-cloak x-show="settingsOpen && room" class="carta-overlay" role="dialog" aria-modal="true" aria-labelledby="uno-settings-title" @keydown.escape.window="settingsOpen = false" @click.self="settingsOpen = false">
+            <div class="carta-results uno-settings">
+                <div class="uno-settings-head"><h2 id="uno-settings-title">{{ __('Table settings') }}</h2><button class="icon-button" @click="settingsOpen = false" aria-label="{{ __('Close') }}"><i data-icon="x-lg"></i></button></div>
+                <p x-show="room?.status !== 'lobby'" class="uno-settings-note">{{ __('Seats and rules are locked once the cards are dealt. You can still remove a player.') }}</p>
+                <fieldset :disabled="room?.status !== 'lobby'">
+                    <legend>{{ __('Seats') }}</legend>
+                    <div class="carta-seat-options"><template x-for="n in [2,3,4,5,6]" :key="n"><button type="button" :class="{ selected: draft.capacity === n }" :aria-pressed="draft.capacity === n" :disabled="n < members.length" @click="draft.capacity = n" x-text="n"></button></template></div>
+                </fieldset>
+                <fieldset :disabled="room?.status !== 'lobby'">
+                    <legend>{{ __('+2 and +4 stacking') }}</legend>
+                    <div class="uno-mode-options">
+                        <button type="button" :class="{ selected: draft.stacking === 'off' }" :aria-pressed="draft.stacking === 'off'" @click="draft.stacking = 'off'"><b>{{ __('Official') }}</b><small>{{ __('No stacking. A +2 or +4 is always taken.') }}</small></button>
+                        <button type="button" :class="{ selected: draft.stacking === 'same' }" :aria-pressed="draft.stacking === 'same'" @click="draft.stacking = 'same'"><b>{{ __('Same cards') }}</b><small>{{ __('Stack +2 on +2 and +4 on +4.') }}</small></button>
+                        <button type="button" :class="{ selected: draft.stacking === 'mixed' }" :aria-pressed="draft.stacking === 'mixed'" @click="draft.stacking = 'mixed'"><b>{{ __('Everything') }}</b><small>{{ __('+2 and +4 stack on each other.') }}</small></button>
+                    </div>
+                </fieldset>
+                <div class="uno-settings-players">
+                    <span class="uno-settings-label">{{ __('Players') }}</span>
+                    <ul><template x-for="(member, i) in members" :key="i"><li x-show="!member.left">
+                        <span class="carta-avatar" :class="'tone-' + (i % 6)" x-text="initial(member.name)"></span>
+                        <strong x-text="member.name"></strong>
+                        <span x-show="i === room?.host" class="carta-tag host">{{ __('Host') }}</span>
+                        <button x-show="i !== room?.host" class="uno-kick" :class="{ confirm: kickConfirm === i }" :disabled="busy" @click="kick(i)" x-text="kickConfirm === i ? t('Tap again to remove') : t('Remove')"></button>
+                    </li></template></ul>
+                    <p x-show="room?.status !== 'lobby'" class="uno-settings-note">{{ __('Removing a player during a match counts as leaving: they lose.') }}</p>
+                </div>
+                <div class="carta-results-actions" x-show="room?.status === 'lobby'">
+                    <button class="carta-primary" @click="saveSettings()" :disabled="busy || !settingsChanged">{{ __('Save') }}</button>
+                    <button class="carta-secondary" @click="settingsOpen = false">{{ __('Cancel') }}</button>
+                </div>
+            </div>
+        </div>
         {{-- Colour choice for a wild card --}}
         <div x-cloak x-show="colorPicker" class="carta-overlay" role="dialog" aria-modal="true" aria-labelledby="uno-color-title" @keydown.escape.window="colorPicker = null">
             <div class="carta-results uno-color-picker">

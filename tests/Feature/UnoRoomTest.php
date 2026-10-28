@@ -208,6 +208,43 @@ class UnoRoomTest extends TestCase
         $this->postJson('/uno/rooms', ['name' => 'X', 'capacity' => 2, 'variant' => 'flip', 'stacking' => 'off'])->assertUnprocessable()->assertJsonValidationErrors('variant');
     }
 
+    public function test_host_settings_change_seats_and_rules_in_the_lobby_only(): void
+    {
+        $room = $this->table(3, 'off', start: false);
+        $this->send($room, 1, 'settings', ['capacity' => 5])->assertForbidden();
+        $this->send($room, 0, 'settings', ['capacity' => 2])->assertUnprocessable()->assertJsonPath('message', 'Remove a player before taking their seat away.');
+        $this->send($room, 0, 'settings', ['capacity' => 9])->assertUnprocessable()->assertJsonValidationErrors('capacity');
+        $room = $this->send($room, 0, 'settings', ['capacity' => 5, 'stacking' => 'same'])->assertOk()->json();
+        $this->assertSame(['capacity' => 5, 'variant' => 'classic', 'stacking' => 'same'], $room['settings']);
+        $this->assertSame(5, Room::find($room['id'])->settings['capacity']);
+    }
+
+    public function test_host_removes_a_player_in_the_lobby_and_they_cannot_come_back_with_that_seat(): void
+    {
+        $room = $this->table(3, start: false);
+        $this->send($room, 1, 'kick', ['target' => 2])->assertForbidden();
+        $this->send($room, 0, 'kick', ['target' => 0])->assertUnprocessable();
+        $room = $this->send($room, 0, 'kick', ['target' => 1])->assertOk()->json();
+        $this->assertSame(['Host', 'Guest 2'], array_column($room['members'], 'name'));
+        $this->assertSame(0, $room['host']);
+        $this->seat(1)->getJson('/uno/rooms/'.$room['id'])->assertForbidden()->assertJsonPath('message', 'The host removed you from this table.');
+        $this->seat(1)->postJson('/uno/rooms/join', ['name' => 'Guest 1', 'code' => $room['code']])->assertForbidden();
+        $this->assertSame(1, $this->peek($room, 2)['viewerIndex'], 'The others keep their seats, shifted down.');
+    }
+
+    public function test_removing_a_player_mid_match_is_a_forfeit(): void
+    {
+        $room = $this->table(3);
+        $room = $this->send($this->peek($room, 0), 0, 'kick', ['target' => 2])->assertOk()->json();
+        $this->assertSame(UnoState::LOSER, $room['game']['players'][2]['status']);
+        $this->assertSame(3, $room['game']['players'][2]['rank']);
+        $this->assertTrue($room['members'][2]['left']);
+        $this->seat(2)->getJson('/uno/rooms/'.$room['id'])->assertForbidden()->assertJsonPath('message', 'The host removed you from this table.');
+        $room = $this->send($room, 0, 'kick', ['target' => 1])->assertOk()->json();
+        $this->assertSame('finished', $room['status']);
+        $this->assertSame(1, $room['game']['players'][0]['rank']);
+    }
+
     public function test_reconnecting_restores_the_seat_and_leaving_forfeits(): void
     {
         $room = $this->table(3);

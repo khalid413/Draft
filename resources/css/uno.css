@@ -151,3 +151,39 @@ a.uno-variant:hover,a.uno-variant:focus-visible { transform:translateY(-6px); bo
 /* The discard pile keeps the last few cards underneath, each at its own loose angle */
 .uno-shell .carta-pile.discard .uno-under { transform:translate(var(--x), var(--y)) rotate(var(--r)); filter:brightness(.82) drop-shadow(0 6px 10px #0009); }
 .uno-shell .carta-pile.discard .carta-top { z-index:5; }
+
+/* Lobby rules summary and the host's settings window */
+.uno-lobby-mode { grid-template-columns:1fr auto; align-items:center; }
+.uno-rules-summary { display:grid; gap:8px; }
+.uno-mode-read { flex-wrap:wrap; }
+.uno-mode-read svg { width:16px; height:16px; }
+.uno-mode-read svg:not(:first-child) { margin-inline-start:8px; }
+.uno-gear { width:46px; height:46px; color:#f3ece0; border-color:#ffffff33; background:#ffffff0d; }
+.uno-gear:hover { color:var(--uno-yellow); border-color:var(--uno-yellow); }
+.uno-gear svg { width:20px; height:20px; transition:transform .4s; }
+.uno-gear:hover svg { transform:rotate(90deg); }
+.uno-gear-hud { position:absolute; top:10px; inset-inline-end:10px; width:36px; height:36px; }
+.uno-gear-hud svg { width:17px; height:17px; }
+.uno-settings { width:min(560px,100%); max-height:calc(100vh - 32px); overflow-y:auto; text-align:start; }
+.uno-settings-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.uno-settings-head .icon-button { color:#f3ece0; border-color:#ffffff2b; }
+.uno-settings fieldset { border:0; padding:0; margin:0; display:grid; gap:8px; }
+.uno-settings fieldset:disabled { opacity:.55; }
+.uno-settings legend,.uno-settings-label { margin-bottom:8px; font-size:13px; color:#d8cfbd; }
+.uno-settings-note { font-size:13px; color:#d8cfbd; background:#ffffff0a; border-radius:10px; padding:8px 12px; }
+.uno-settings-players ul { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.uno-settings-players li { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:12px; background:#ffffff0c; }
+.uno-settings-players li strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.uno-settings-players .carta-avatar { width:34px; height:34px; font-size:14px; }
+.uno-kick { padding:7px 12px; border-radius:10px; font-size:12px; font-weight:700 !important; border:1px solid #e0574a88 !important; color:#ff9b8f !important; }
+.uno-kick:hover { background:#e0574a22 !important; }
+.uno-kick.confirm { background:#e0574a !important; color:#fff !important; }
+
+/* Home: one compact card with Create / Join tabs */
+.uno-entry { align-self:center; gap:18px; max-width:460px; width:100%; justify-self:center; }
+.uno-tabs { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; border-radius:14px; background:#00000059; border:1px solid #ffffff14; }
+.uno-tabs button { min-height:44px; border-radius:10px; font-weight:700 !important; color:#cfc7b8 !important; transition:background .2s,color .2s; }
+.uno-tabs button.active { background:linear-gradient(180deg,#ffd633,#e0a800) !important; color:#2a1a02 !important; box-shadow:0 4px 14px #f5c40033; }
+.uno-tabs button:not(.active):hover { color:#fff !important; background:#ffffff0d !important; }
+.uno-pane { display:grid; gap:14px; animation:uno-pane-in .25s ease-out; }
+@keyframes uno-pane-in { from { opacity:0; transform:translateY(6px); } }

@@ -18,6 +18,8 @@ class RoomAccess
                 return $index;
             }
         }
+        // Seats the host removed: their browser gets told why, and cannot sit back down with the same session.
+        abort_if(in_array(hash('sha256', $token), $room->settings['kicked'] ?? [], true), 403, __('The host removed you from this table.'));
         abort(403, __('Your seat is no longer in this room.'));
     }
 }
