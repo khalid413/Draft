@@ -36,6 +36,8 @@ import megaphoneFill from 'bootstrap-icons/icons/megaphone-fill.svg?raw';
 import shieldExclamation from 'bootstrap-icons/icons/shield-exclamation.svg?raw';
 import handIndexThumb from 'bootstrap-icons/icons/hand-index-thumb.svg?raw';
 import gear from 'bootstrap-icons/icons/gear.svg?raw';
+import qrCode from 'bootstrap-icons/icons/qr-code.svg?raw';
+import qrCodeScan from 'bootstrap-icons/icons/qr-code-scan.svg?raw';
 import emojiFrown from 'bootstrap-icons/icons/emoji-frown.svg?raw';
 import volumeMute from 'bootstrap-icons/icons/volume-mute.svg?raw';
 import volumeUp from 'bootstrap-icons/icons/volume-up.svg?raw';
@@ -49,7 +51,7 @@ const icons = {
     'volume-mute': volumeMute, 'volume-up': volumeUp, 'x-lg': xLg,
     'arrow-down': arrowDown, 'arrow-up': arrowUp, 'cloud-arrow-up': cloudArrowUp, 'door-open': doorOpen, inbox,
     'music-note-list': musicNoteList, trash3, 'trophy-fill': trophyFill, 'award-fill': awardFill, 'emoji-frown': emojiFrown,
-    'arrow-clockwise': arrowClockwise, 'megaphone-fill': megaphoneFill, 'shield-exclamation': shieldExclamation, 'hand-index-thumb': handIndexThumb, gear,
+    'arrow-clockwise': arrowClockwise, 'megaphone-fill': megaphoneFill, 'shield-exclamation': shieldExclamation, 'hand-index-thumb': handIndexThumb, gear, 'qr-code': qrCode, 'qr-code-scan': qrCodeScan,
 };
 
 const template = document.createElement('template');

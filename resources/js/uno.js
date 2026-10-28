@@ -3,6 +3,8 @@ import { renderIcons } from './icons';
 import { t, tn, ordinal } from './i18n';
 import { playMoves, dealCards, banner, throwCard, returnCard } from './unoMotion';
 import { sound } from './unoSound';
+import { roomShare } from './roomShare';
+import { roomScanner } from './roomScanner';
 
 const ROOM_KEY = 'uno-room-id';
 const COLORS = ['red', 'blue', 'green', 'yellow'];
@@ -16,6 +18,8 @@ const STACKING = { off: 'Official: no stacking', same: 'Stacking: +2 on +2, +4 o
 
 // Display-only client: every card, turn and ranking shown here comes from the server's view of this seat.
 export default (variant = 'classic') => ({
+    ...roomShare(),
+    ...roomScanner(),
     variant, colors: COLORS, screen: 'home', loading: true, busy: false, error: '',
     room: null, stopWatch: null, form: { name: '', capacity: 4, stacking: 'off', code: '', joinName: '' },
     colorPicker: null, toasts: [], seenMove: null, copied: '', ownFlights: {},
@@ -112,7 +116,7 @@ export default (variant = 'classic') => ({
         this.$nextTick(renderIcons);
         this.ticker = setInterval(() => this.tick(), 200);
     },
-    destroy() { this.stopWatch?.(); clearInterval(this.ticker); },
+    destroy() { this.stopWatch?.(); clearInterval(this.ticker); this.stopScan(); },
     // Turn clock: the server sets each turn's deadline; every seat counts down against it and,
     // once it has passed, reports the timeout (the server applies it once and skips the turn).
     get turnMsLeft() {
@@ -310,8 +314,9 @@ export default (variant = 'classic') => ({
     async leave() {
         if (await this.act('leave')) this.forget();
     },
+    get inviteLink() { return `${location.origin}/uno/${this.variant}?join=${this.room?.code}`; },
     async copy(kind) {
-        const text = kind === 'link' ? `${location.origin}/uno/${this.variant}?join=${this.room.code}` : this.room.code;
+        const text = kind === 'link' ? this.inviteLink : this.room.code;
         try { await navigator.clipboard.writeText(text); this.copied = kind; setTimeout(() => { if (this.copied === kind) this.copied = ''; }, 2000); }
         catch { this.error = (kind === 'link' ? t('Copy this link: :text', { text }) : t('Copy this code: :text', { text })); }
     },

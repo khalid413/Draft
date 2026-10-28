@@ -298,3 +298,23 @@
 .carta-pile.discard { width:clamp(88px,7.6vw,120px); align-self:center; }
 @media (max-width:900px) { .carta-shell .carta-pile.discard { width:100px; } }
 @media (max-width:560px) { .carta-shell .carta-pile.discard { width:84px; } }
+
+/* Share a room by QR code (Carta and UNO lobbies) */
+.room-share { width:min(400px,100%); justify-items:center; }
+.room-share-hint { color:#d8cfbd; font-size:14px; line-height:1.5; }
+.room-share-qr { width:min(260px,70vw); aspect-ratio:1; padding:12px; border-radius:18px; background:#fff; box-shadow:0 0 0 4px var(--c-gold), 0 18px 40px #000a; }
+.room-share-qr svg { display:block; width:100%; height:100%; }
+.room-share-code { display:grid; justify-items:center; gap:4px; }
+.room-share-code strong { font:600 28px 'JetBrains Mono',monospace; letter-spacing:5px; user-select:all; }
+.room-share .carta-results-actions svg { width:16px; height:16px; }
+
+/* Scan a table's QR code with the camera (Carta and UNO join forms) */
+.room-scan-open { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; border-radius:10px; border:1px dashed #f6efe255 !important; color:var(--c-cream); font-weight:600 !important; }
+.room-scan-open:hover { border-color:var(--c-gold) !important; color:var(--c-gold) !important; }
+.room-scan-open svg { width:18px; height:18px; }
+.room-scan { width:min(420px,100%); justify-items:center; }
+.room-scan-view { position:relative; width:min(320px,80vw); aspect-ratio:1; overflow:hidden; border-radius:18px; background:#000; }
+.room-scan-view video { width:100%; height:100%; object-fit:cover; }
+.room-scan-frame { position:absolute; inset:16%; border-radius:14px; box-shadow:0 0 0 999px #0007; outline:3px solid var(--c-gold); animation:room-scan-pulse 1.4s ease-in-out infinite; }
+@keyframes room-scan-pulse { 50% { outline-color:#fff; } }
+.room-scan-error { color:#ff9b8f; font-size:14px; }

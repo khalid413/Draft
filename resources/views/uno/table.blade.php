@@ -36,6 +36,7 @@
                 </form>
                 <form x-show="homeTab === 'join'" x-cloak id="uno-pane-join" role="tabpanel" aria-labelledby="uno-tab-join" class="uno-pane" @submit.prevent="joinRoom()">
                     <label>{{ __('Table code') }}<input x-model="form.code" required minlength="8" maxlength="8" autocomplete="off" dir="ltr" placeholder="{{ __('8 letters') }}" class="carta-code-input" @input="form.code = form.code.toUpperCase()"></label>
+                    <button type="button" class="room-scan-open" @click="startScan()"><i data-icon="qr-code-scan"></i> {{ __('Scan a QR code') }}</button>
                     <label>{{ __('Your name') }}<input x-model="form.joinName" required minlength="2" maxlength="20" autocomplete="nickname" placeholder="{{ __('e.g. Salma') }}"></label>
                     <button class="carta-primary" :disabled="busy"><span x-text="busy ? t('Joining…') : t('Join table')"></span><i data-icon="arrow-right"></i></button>
                 </form>
@@ -47,7 +48,7 @@
             <span class="carta-eyebrow">{{ __('TABLE LOBBY') }}</span>
             <h1>{{ __('Gather the players.') }}</h1>
             <div class="carta-code-card"><div><span class="carta-eyebrow">{{ __('TABLE CODE') }}</span><strong dir="ltr" x-text="room?.code"></strong></div>
-                <div class="carta-code-actions"><button class="icon-button" :class="{ copied: copied === 'code' }" @click="copy('code')" aria-label="{{ __('Copy table code') }}" title="{{ __('Copy table code') }}"><span x-show="copied !== 'code'"><i data-icon="copy"></i></span><span x-show="copied === 'code'"><i data-icon="check-lg"></i></span></button><button class="icon-button" :class="{ copied: copied === 'link' }" @click="copy('link')" aria-label="{{ __('Copy invite link') }}" title="{{ __('Copy invite link') }}"><span x-show="copied !== 'link'"><i data-icon="share"></i></span><span x-show="copied === 'link'"><i data-icon="check-lg"></i></span></button></div></div>
+                <div class="carta-code-actions"><button class="icon-button" @click="openShare()" aria-label="{{ __('Show QR code') }}" title="{{ __('Show QR code') }}"><i data-icon="qr-code"></i></button><button class="icon-button" :class="{ copied: copied === 'code' }" @click="copy('code')" aria-label="{{ __('Copy table code') }}" title="{{ __('Copy table code') }}"><span x-show="copied !== 'code'"><i data-icon="copy"></i></span><span x-show="copied === 'code'"><i data-icon="check-lg"></i></span></button><button class="icon-button" :class="{ copied: copied === 'link' }" @click="copy('link')" aria-label="{{ __('Copy invite link') }}" title="{{ __('Copy invite link') }}"><span x-show="copied !== 'link'"><i data-icon="share"></i></span><span x-show="copied === 'link'"><i data-icon="check-lg"></i></span></button></div></div>
             {{-- Seats and rules at a glance; the host changes them (and removes players) in the settings window. --}}
             <div class="uno-lobby-mode">
                 <div class="uno-rules-summary">
@@ -206,6 +207,9 @@
                 <button class="text-link" @click="colorPicker = null">{{ __('Cancel') }}</button>
             </div>
         </div>
+
+        @include('partials.room-share')
+        @include('partials.room-scan')
 
         <div class="carta-toasts" aria-live="polite"><template x-for="toast in toasts" :key="toast.id"><div class="carta-toast" :class="toast.kind" x-text="toast.text"></div></template></div>
     </main>

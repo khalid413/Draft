@@ -2,6 +2,8 @@ import { gameClient } from './gameClient';
 import { renderIcons } from './icons';
 import { t, tn, ordinal, locale } from './i18n';
 import { animateMoves } from './cartaMotion';
+import { roomShare } from './roomShare';
+import { roomScanner } from './roomScanner';
 
 const ROOM_KEY = 'carta-room-id';
 // English names are translation keys; the Darija names stay as a subtitle in every other language.
@@ -16,6 +18,8 @@ const SEATS = { 1: ['top'], 2: ['left', 'right'], 3: ['left', 'top', 'right'], 4
 
 // Display-only client: every card, turn and ranking shown here comes from the server's view of this seat.
 export default () => ({
+    ...roomShare(),
+    ...roomScanner(),
     suits: SUITS, screen: 'home', loading: true, busy: false, error: '',
     room: null, stopWatch: null, form: { name: '', capacity: 4, code: '', joinName: '' },
     suitPicker: null, toasts: [], seenMove: null, copied: '', playedFrom: {},
@@ -99,7 +103,7 @@ export default () => ({
         this.loading = false;
         this.$nextTick(renderIcons);
     },
-    destroy() { this.stopWatch?.(); },
+    destroy() { this.stopWatch?.(); this.stopScan(); },
 
     async enter(room) {
         this.stopWatch?.();
@@ -200,8 +204,9 @@ export default () => ({
     async leave() {
         if (await this.act('leave')) this.forget();
     },
+    get inviteLink() { return `${location.origin}/carta?join=${this.room?.code}`; },
     async copy(kind) {
-        const text = kind === 'link' ? `${location.origin}/carta?join=${this.room.code}` : this.room.code;
+        const text = kind === 'link' ? this.inviteLink : this.room.code;
         try { await navigator.clipboard.writeText(text); this.copied = kind; setTimeout(() => { if (this.copied === kind) this.copied = ''; }, 2000); }
         catch { this.error = (kind === 'link' ? t('Copy this link: :text', { text }) : t('Copy this code: :text', { text })); }
     },
