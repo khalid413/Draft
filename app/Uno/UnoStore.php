@@ -10,6 +10,12 @@ use App\Models\UnoPlayer;
 /** Maps UnoState to its tables: the game row, one row per seat (hand, status, rank, UNO call) and the move history. */
 final class UnoStore
 {
+    /** Seconds each player gets per turn. */
+    public const TURN_SECONDS = 10;
+
+    /** Extra time before the clock counts, covering the card animations that hand the turn over. */
+    private const HANDOVER_MS = 1500;
+
     public function create(Room $room, string $variant, UnoState $state): UnoGame
     {
         $game = UnoGame::create(['room_id' => $room->id, 'variant' => $variant, 'stacking' => $state->stacking, 'status' => $state->status,
@@ -44,7 +50,11 @@ final class UnoStore
     /** Writes the state, bumps the version and appends the action's moves; the first move carries the client's action id. */
     public function save(UnoGame $game, UnoState $state, ?string $actionId = null): void
     {
-        $game->update(['status' => $state->status, 'turn_number' => $state->turnNumber, 'current_seat' => $state->currentSeat,
+        // A new turn starts a new clock; actions inside the same turn (draw, UNO, a catch) leave it running.
+        $newTurn = $game->turn_ends_at === null || $state->turnNumber !== $game->turn_number;
+        $endsAt = $state->status !== UnoState::PLAYING ? null
+            : ($newTurn ? (int) floor(microtime(true) * 1000) + self::TURN_SECONDS * 1000 + self::HANDOVER_MS : $game->turn_ends_at);
+        $game->update(['turn_ends_at' => $endsAt, 'status' => $state->status, 'turn_number' => $state->turnNumber, 'current_seat' => $state->currentSeat,
             'direction' => $state->direction, 'active_color' => $state->activeColor, 'pending_effect' => $state->pendingEffect,
             'pending_draw' => $state->pendingDraw, 'drawn_card' => $state->drawnCard,
             'uno_exposed' => $state->unoExposed, 'draw_pile' => $state->drawPile, 'discard_pile' => $state->discardPile,
@@ -62,6 +72,12 @@ final class UnoStore
                 'color' => $event['color'] ?? null, 'target' => $event['target'] ?? null, 'amount' => $event['amount'] ?? null]);
         }
         $state->events = [];
+    }
+
+    /** True once the current turn's clock has run out. */
+    public function turnExpired(UnoGame $game): bool
+    {
+        return $game->turn_ends_at !== null && microtime(true) * 1000 >= $game->turn_ends_at;
     }
 
     public function alreadyApplied(UnoGame $game, ?string $actionId): bool

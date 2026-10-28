@@ -198,6 +198,29 @@ final class ClassicRules implements UnoRules
         return $state;
     }
 
+    /**
+     * The turn clock ran out. The player loses the turn; a penalty waiting for them is taken, never dodged,
+     * and a playable card they drew stays in their hand. $turn must match, so a late or repeated timeout does nothing.
+     */
+    public function timeout(UnoState $state, int $turn): UnoState
+    {
+        if ($state->status !== UnoState::PLAYING || $state->turnNumber !== $turn) {
+            return $state;
+        }
+        $seat = $state->currentSeat;
+        $this->closeUnoWindow($state, $seat);
+        $state->events[] = ['type' => 'timeout', 'seat' => $seat];
+        $state->drawnCard = null;
+        if ($state->pendingEffect !== UnoState::NONE) {
+            $this->takePenalty($state, $seat);
+        } else {
+            $this->advance($state, $seat);
+        }
+        $this->assertConserved($state);
+
+        return $state;
+    }
+
     /** Takes the whole pending penalty and loses the turn. */
     public function accept(UnoState $state, int $seat): UnoState
     {

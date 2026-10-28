@@ -187,3 +187,18 @@ a.uno-variant:hover,a.uno-variant:focus-visible { transform:translateY(-6px); bo
 .uno-tabs button:not(.active):hover { color:#fff !important; background:#ffffff0d !important; }
 .uno-pane { display:grid; gap:14px; animation:uno-pane-in .25s ease-out; }
 @keyframes uno-pane-in { from { opacity:0; transform:translateY(6px); } }
+
+/* Turn clock: a ring that drains around the current player's avatar, and a bar under your turn line */
+.uno-shell .carta-avatar.uno-timed { position:relative; }
+.uno-shell .carta-avatar.uno-timed::after { content:''; position:absolute; inset:-6px; border-radius:50%; pointer-events:none;
+    background:conic-gradient(#3ddc97 calc(var(--p, 1) * 360deg), #ffffff1a 0);
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
+.uno-shell .carta-avatar.uno-timed.low::after { background:conic-gradient(#ff4d55 calc(var(--p, 1) * 360deg), #ffffff1a 0); animation:uno-pulse .5s ease-in-out infinite; }
+.uno-timer { display:flex; align-items:center; gap:10px; width:min(240px, 80%); }
+.uno-timer i { position:relative; flex:1; height:8px; border-radius:8px; background:#ffffff1f; overflow:hidden; }
+.uno-timer i::before { content:''; position:absolute; inset:0; transform-origin:left; transform:scaleX(var(--p, 1)); background:linear-gradient(90deg,#2fa84f,#3ddc97); border-radius:inherit; transition:transform .2s linear; }
+.uno-timer span { min-width:30px; font:800 14px 'JetBrains Mono',monospace; color:#3ddc97; }
+.uno-timer.low i::before { background:linear-gradient(90deg,#b3121b,#ff4d55); }
+.uno-timer.low span { color:#ff6b72; animation:uno-pulse .5s ease-in-out infinite; }
+.uno-shell .carta-center .uno-timer { order:-1; }
+[dir="rtl"] .uno-timer i::before { transform-origin:right; }

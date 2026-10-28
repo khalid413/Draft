@@ -25,4 +25,6 @@ interface UnoRules
     public function catchUno(UnoState $state, int $catcher, int $target): UnoState;
 
     public function forfeit(UnoState $state, int $seat): UnoState;
+
+    public function timeout(UnoState $state, int $turn): UnoState;
 }

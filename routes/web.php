@@ -39,7 +39,7 @@ Route::middleware(SetLocale::class)->group(function () {
         Route::post('/', 'create')->block()->middleware('throttle:10,1');
         Route::post('/join', 'join')->block()->middleware('throttle:15,1');
         Route::get('/{room}', 'state')->block();
-        Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'settings', 'leave', 'start', 'rematch', 'play', 'draw', 'pass', 'accept', 'uno', 'catch', 'kick'])->block();
+        Route::post('/{room}/{action}', 'action')->whereIn('action', ['ready', 'settings', 'leave', 'start', 'rematch', 'play', 'draw', 'pass', 'accept', 'uno', 'catch', 'kick', 'timeout'])->block();
     });
     Route::get('/uno/{variant}', [UnoController::class, 'page'])->where('variant', '[a-z-]+')->name('uno.play');
     Route::prefix('rooms')->middleware('throttle:rooms')->controller(RoomController::class)->group(function () {

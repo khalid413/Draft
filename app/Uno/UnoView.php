@@ -40,7 +40,7 @@ final class UnoView
 
         return [
             'id' => $game->id, 'variant' => $game->variant, 'stacking' => $state->stacking, 'status' => $state->status, 'version' => $game->version,
-            'turnNumber' => $state->turnNumber, 'currentSeat' => $state->currentSeat, 'direction' => $state->direction, 'activeColor' => $state->activeColor,
+            'turnNumber' => $state->turnNumber, 'turnEndsAtMs' => $game->turn_ends_at, 'turnSeconds' => UnoStore::TURN_SECONDS, 'currentSeat' => $state->currentSeat, 'direction' => $state->direction, 'activeColor' => $state->activeColor,
             'pending' => ['effect' => $state->pendingEffect, 'draw' => $state->pendingDraw],
             'top' => $card($state->discardPile[array_key_last($state->discardPile)]), 'back' => $variant->backImage(),
             'drawCount' => count($state->drawPile), 'discardCount' => count($state->discardPile),

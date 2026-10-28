@@ -111,13 +111,15 @@
                         </div>
                     </div>
                     <p class="carta-turn" :class="{ mine: me?.isTurn }" x-text="turnText"></p>
+                    {{-- Your turn clock: when it runs out the turn is skipped (a waiting penalty is taken). --}}
+                    <div x-show="me?.isTurn && game.status === 'PLAYING'" class="uno-timer" :class="{ low: turnLeft <= 3 }" role="timer" :aria-label="tn(':count second left|:count seconds left', turnLeft)"><i :style="`--p:${turnProgress}`"></i><span x-text="turnLeft + 's'"></span></div>
                 </div>
             </div>
 
             <template x-for="(player, i) in opponents" :key="player.seat">
                 <div class="carta-seat" :data-seat="player.seat" :class="'pos-' + seatPosition(i) + (player.isTurn && game.status === 'PLAYING' ? ' turn' : '') + (player.status !== 'ACTIVE' ? ' done' : '')">
                     <div class="carta-chip">
-                        <span class="carta-avatar" :class="'tone-' + (player.seat % 6)" x-text="initial(player.name)"></span>
+                        <span class="carta-avatar" :class="'tone-' + (player.seat % 6) + (player.isTurn && game.status === 'PLAYING' ? ' uno-timed' + (turnLeft <= 3 ? ' low' : '') : '')" :style="player.isTurn ? `--p:${turnProgress}` : ''" x-text="initial(player.name)"></span>
                         <div><strong x-text="player.name"></strong><small :class="{ win: player.rank === 1, lose: player.status === 'LOSER' }" x-text="rankTag(player)"></small></div>
                         <span x-show="player.uno" class="uno-tag">UNO</span>
                         <span x-show="player.left" class="carta-tag left">{{ __('Left') }}</span>
@@ -139,7 +141,7 @@
                     <p x-show="me && me.status !== 'ACTIVE' && game.status === 'PLAYING'" class="carta-spectate">{{ __('You are out of cards. Watching the others play it out.') }}</p>
                 </div>
                 <div class="carta-chip me">
-                    <span class="carta-avatar" :class="'tone-' + ((me?.seat ?? 0) % 6)" x-text="initial(myMember?.name)"></span>
+                    <span class="carta-avatar" :class="'tone-' + ((me?.seat ?? 0) % 6) + (me?.isTurn && game.status === 'PLAYING' ? ' uno-timed' + (turnLeft <= 3 ? ' low' : '') : '')" :style="me?.isTurn ? `--p:${turnProgress}` : ''" x-text="initial(myMember?.name)"></span>
                     <div><strong>{{ __('You') }}</strong><small :class="{ win: me?.rank === 1, lose: me?.status === 'LOSER' }" x-text="me ? (me.status === 'ACTIVE' ? tn(':count card|:count cards', game.hand.length) : rankTag({ ...me, cards: 0 })) : ''"></small></div>
                     <span x-show="me?.unoCalled && game.hand.length === 1" class="uno-tag">UNO</span>
                 </div>

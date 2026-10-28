@@ -1,0 +1,19 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    // Each UNO turn has a deadline (epoch milliseconds); when it passes, the turn is skipped.
+    public function up(): void
+    {
+        Schema::table('uno_games', fn (Blueprint $table) => $table->unsignedBigInteger('turn_ends_at')->nullable()->after('turn_number'));
+    }
+
+    public function down(): void
+    {
+        Schema::table('uno_games', fn (Blueprint $table) => $table->dropColumn('turn_ends_at'));
+    }
+};

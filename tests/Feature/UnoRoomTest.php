@@ -245,6 +245,30 @@ class UnoRoomTest extends TestCase
         $this->assertSame(1, $room['game']['players'][0]['rank']);
     }
 
+    public function test_the_turn_clock_is_shown_and_an_expired_turn_is_skipped_once(): void
+    {
+        $room = $this->table(3);
+        $game = $room['game'];
+        $this->assertSame(10, $game['turnSeconds']);
+        $this->assertGreaterThan($room['serverTimeMs'] + 10000, $game['turnEndsAtMs']);
+        $seat = $game['currentSeat'];
+        $other = ($seat + 1) % 3;
+
+        // Too early: nothing happens.
+        $this->seat($other)->postJson('/uno/rooms/'.$room['id'].'/timeout', ['version' => $room['version'], 'turn' => $game['turnNumber']])->assertOk();
+        $this->assertSame($seat, $this->peek($room, 0)['game']['currentSeat']);
+
+        // Time is up: any seat may report it, whatever table version it holds; it applies once.
+        UnoGame::query()->update(['turn_ends_at' => (int) (microtime(true) * 1000) - 1000]);
+        $after = $this->seat($other)->postJson('/uno/rooms/'.$room['id'].'/timeout', ['version' => 0, 'turn' => $game['turnNumber']])->assertOk()->json();
+        $this->assertNotSame($seat, $after['game']['currentSeat']);
+        $this->assertSame('timeout', UnoMove::latest('id')->value('type'));
+        $this->assertGreaterThan((int) (microtime(true) * 1000), $after['game']['turnEndsAtMs'], 'The next player gets a fresh clock.');
+        $this->seat($seat)->postJson('/uno/rooms/'.$room['id'].'/timeout', ['version' => 0, 'turn' => $game['turnNumber']])->assertOk();
+        $this->assertSame(1, UnoMove::where('type', 'timeout')->count());
+        $this->assertSame($after['game']['currentSeat'], $this->peek($room, 0)['game']['currentSeat']);
+    }
+
     public function test_reconnecting_restores_the_seat_and_leaving_forfeits(): void
     {
         $room = $this->table(3);

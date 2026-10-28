@@ -21,6 +21,7 @@ export default (variant = 'classic') => ({
     colorPicker: null, toasts: [], seenMove: null, copied: '', ownFlights: {},
     animating: false, queued: null, soundOn: sound.on, turnShown: null, later: [],
     settingsOpen: false, draft: { capacity: 4, stacking: 'off' }, kickConfirm: null, homeTab: 'create',
+    clock: Date.now(), skew: 0, ticker: null, timeoutSent: null, lastTick: null,
 
     get game() { return this.room?.game || null; },
     get me() { return this.game?.you || null; },
@@ -109,8 +110,33 @@ export default (variant = 'classic') => ({
         }
         this.loading = false;
         this.$nextTick(renderIcons);
+        this.ticker = setInterval(() => this.tick(), 200);
     },
-    destroy() { this.stopWatch?.(); },
+    destroy() { this.stopWatch?.(); clearInterval(this.ticker); },
+    // Turn clock: the server sets each turn's deadline; every seat counts down against it and,
+    // once it has passed, reports the timeout (the server applies it once and skips the turn).
+    get turnMsLeft() {
+        const ends = this.game?.status === 'PLAYING' ? this.game.turnEndsAtMs : null;
+        return ends ? Math.max(0, Math.min(ends - this.clock, this.game.turnSeconds * 1000)) : 0;
+    },
+    get turnLeft() { return Math.ceil(this.turnMsLeft / 1000); },
+    get turnProgress() { return this.game ? this.turnMsLeft / (this.game.turnSeconds * 1000) : 0; },
+    tick() {
+        this.clock = Date.now() + this.skew;
+        const game = this.game;
+        if (!game || game.status !== 'PLAYING' || !game.turnEndsAtMs) return;
+        const left = game.turnEndsAtMs - this.clock;
+        if (this.me?.isTurn && left > 0 && left <= 3000 && this.lastTick !== Math.ceil(left / 1000)) {
+            this.lastTick = Math.ceil(left / 1000);
+            sound.play('tick');
+        }
+        if (left < -300 && this.timeoutSent !== game.turnNumber) {
+            this.timeoutSent = game.turnNumber;
+            gameClient.uno.action(this.room.id, 'timeout', this.room.version, { turn: game.turnNumber })
+                .then(next => { if (next?.id) this.accept(next); })
+                .catch(() => this.refresh());
+        }
+    },
 
     async enter(room) {
         this.stopWatch?.();
@@ -134,6 +160,7 @@ export default (variant = 'classic') => ({
             return;
         }
         const previous = this.room;
+        if (room.serverTimeMs) this.skew = room.serverTimeMs - Date.now();
         this.later = [];
         const fresh = this.announce(room);
         const notices = this.later;
@@ -188,6 +215,7 @@ export default (variant = 'classic') => ({
                 uno: mine ? t('You called UNO!') : t(':name calls UNO!', { name }),
                 caught: mine ? t(':other caught you without UNO: +2 cards.', { other }) : t(':other caught :name without UNO: +2 cards.', { name, other }),
                 forfeit: mine ? '' : t(':name left the table and forfeits.', { name }),
+                timeout: mine ? t('Time is up: your turn was skipped.') : t(':name ran out of time.', { name }),
                 reshuffle: t('The discard pile was reshuffled into the deck.'),
             }[move.type];
             if (text) this.later.push([text, move.type]);

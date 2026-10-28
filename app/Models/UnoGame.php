@@ -20,7 +20,7 @@ class UnoGame extends Model
     {
         return ['draw_pile' => 'array', 'discard_pile' => 'array',
             'version' => 'integer', 'turn_number' => 'integer', 'current_seat' => 'integer', 'direction' => 'integer',
-            'pending_draw' => 'integer', 'uno_exposed' => 'integer', 'started_at' => 'datetime', 'finished_at' => 'datetime'];
+            'pending_draw' => 'integer', 'uno_exposed' => 'integer', 'turn_ends_at' => 'integer', 'started_at' => 'datetime', 'finished_at' => 'datetime'];
     }
 
     public function room(): BelongsTo

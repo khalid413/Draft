@@ -347,6 +347,31 @@ class UnoClassicRulesTest extends TestCase
         }
     }
 
+    public function test_a_timeout_skips_the_turn_takes_a_waiting_penalty_and_applies_once(): void
+    {
+        $state = $this->table([['red_1_1', 'blue_2_1'], ['green_3_1'], ['red_4_1']], 'red_9_1');
+        $this->rules()->timeout($state, 1);
+        $this->assertSame([1, 2], [$state->currentSeat, $state->turnNumber]);
+        $this->assertCount(2, $state->players[0]['hand'], 'Skipped, nothing drawn.');
+        $this->rules()->timeout($state, 1);
+        $this->assertSame(1, $state->currentSeat, 'A stale timeout for an old turn changes nothing.');
+
+        // A penalty waiting for the slow player is taken, not dodged.
+        $state = $this->table([['red_draw2_1', 'red_1_1'], ['blue_draw2_1', 'green_5_1'], ['red_3_1']], 'red_9_1', stacking: UnoState::STACK_SAME);
+        $this->rules()->play($state, 0, 'red_draw2_1');
+        $this->rules()->timeout($state, $state->turnNumber);
+        $this->assertCount(4, $state->players[1]['hand']);
+        $this->assertSame([UnoState::NONE, 2], [$state->pendingEffect, $state->currentSeat]);
+
+        // A playable drawn card is kept, and the turn moves on.
+        $state = $this->table([['blue_2_1'], ['green_3_1']], 'red_9_1', draw: ['red_8_1']);
+        $this->rules()->draw($state, 0);
+        $this->rules()->timeout($state, $state->turnNumber);
+        $this->assertSame([null, 1], [$state->drawnCard, $state->currentSeat]);
+        $this->assertContains('red_8_1', $state->players[0]['hand']);
+        $this->assertConserved($state);
+    }
+
     public function test_a_forfeit_ranks_last_and_when_one_player_remains_they_win(): void
     {
         $state = $this->table([['red_1_1', 'blue_1_1'], ['red_2_1', 'blue_2_1'], ['red_3_1', 'green_3_1']], 'red_9_1', current: 1);

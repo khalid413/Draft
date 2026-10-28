@@ -80,7 +80,8 @@ class UnoController extends Controller
             'actionId' => [in_array($action, self::GAME_ACTIONS, true) ? 'required' : 'sometimes', 'uuid'],
             'card' => [$action === 'play' ? 'required' : 'prohibited', 'string', 'max:20'],
             'color' => ['sometimes', 'nullable', 'in:'.implode(',', UnoCard::COLORS)],
-            'target' => [in_array($action, ['catch', 'kick'], true) ? 'required' : 'prohibited', 'integer', 'between:0,5']]);
+            'target' => [in_array($action, ['catch', 'kick'], true) ? 'required' : 'prohibited', 'integer', 'between:0,5'],
+            'turn' => [$action === 'timeout' ? 'required' : 'prohibited', 'integer', 'min:1']]);
 
         [$room, $index] = DB::transaction(function () use ($request, $room, $action) {
             $room = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
@@ -88,6 +89,12 @@ class UnoController extends Controller
             $game = $room->game_uuid ? $this->store->lock($room->game_uuid) : null;
             // A retried request (double click, flaky network) is answered with the current state, never applied twice.
             if ($game && $this->store->alreadyApplied($game, $request->input('actionId'))) {
+                return [$room, $index];
+            }
+            // Every seat's clock reports the same timeout; the turn number makes it apply once, whatever their table version.
+            if ($action === 'timeout') {
+                $this->timeout($room, $game, $request->integer('turn'));
+
                 return [$room, $index];
             }
             if ($room->version !== $request->integer('version')) {
@@ -191,6 +198,23 @@ class UnoController extends Controller
         if ($state->status === UnoState::FINISHED) {
             $room->status = 'finished';
         }
+    }
+
+    /** Skips the current turn once its clock has run out; early or repeated reports change nothing. */
+    private function timeout(Room $room, ?UnoGame $game, int $turn): bool
+    {
+        if ($room->status !== 'playing' || ! $game || ! $this->store->turnExpired($game) || $game->turn_number !== $turn) {
+            return false;
+        }
+        $state = $this->rules($room)->timeout($this->store->load($game), $turn);
+        $this->store->save($game, $state);
+        if ($state->status === UnoState::FINISHED) {
+            $room->status = 'finished';
+        }
+        $room->version++;
+        $room->save();
+
+        return true;
     }
 
     private function cardId(mixed $card): string

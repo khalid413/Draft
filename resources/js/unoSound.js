@@ -58,6 +58,7 @@ const SOUNDS = {
     wild: ctx => [523, 659, 784].forEach((frequency, i) => tone(ctx, { frequency, duration: .22, volume: .08, type: 'triangle', delay: i * .06 })),
     uno: ctx => { tone(ctx, { frequency: 660, duration: .18, volume: .16, type: 'square' }); tone(ctx, { frequency: 990, duration: .3, volume: .14, type: 'square', delay: .12 }); },
     turn: ctx => tone(ctx, { frequency: 587, to: 880, duration: .2, volume: .1, type: 'sine' }),
+    tick: ctx => tone(ctx, { frequency: 1200, duration: .05, volume: .07, type: 'square' }),
 };
 
 export const sound = {
