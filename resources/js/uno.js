@@ -210,7 +210,8 @@ export default (variant = 'classic') => ({
     // Each game action carries a fresh id so a retried request is applied at most once on the server.
     async act(action, payload = {}) {
         if (!this.room) return false;
-        if (this.animating && GAME_ACTIONS.includes(action)) return false; // Let the last move finish before the next one.
+        // Let the last move finish before the next one. Calling UNO is the exception: it races the catch, so it never waits.
+        if (this.animating && GAME_ACTIONS.includes(action) && action !== 'uno') return false;
         const ok = await this.run(async () => {
             const actionId = GAME_ACTIONS.includes(action) ? crypto.randomUUID() : undefined;
             const next = await gameClient.uno.action(this.room.id, action, this.room.version, actionId ? { ...payload, actionId } : payload);

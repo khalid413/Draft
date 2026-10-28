@@ -50,7 +50,6 @@
 /* UNO call and catch */
 .uno-call { min-height:52px; padding:0 26px; border-radius:30px; font:800 20px 'Space Grotesk',sans-serif !important; letter-spacing:1px; color:#fff6c2 !important;
     background:radial-gradient(circle at 35% 30%,#ff5a5f,#c4101a) !important; border:3px solid var(--uno-yellow) !important; box-shadow:0 0 0 4px #e3262f44, 0 8px 22px #000a; animation:uno-pulse 1s ease-in-out infinite; }
-.uno-call.late { animation-duration:.5s; }
 @keyframes uno-pulse { 50% { transform:scale(1.08); } }
 .uno-tag { padding:3px 9px; border-radius:20px; font:800 11px 'Space Grotesk',sans-serif; letter-spacing:1px; background:var(--uno-red); color:#fff6c2; border:1.5px solid var(--uno-yellow); }
 .uno-catch { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:20px; font-weight:800 !important; font-size:13px; background:var(--uno-yellow) !important; color:#2a1a02 !important; box-shadow:0 0 0 3px #f5c40044, 0 6px 16px #0009; animation:uno-pulse .8s ease-in-out infinite; }

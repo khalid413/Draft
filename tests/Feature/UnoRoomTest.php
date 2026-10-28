@@ -61,20 +61,18 @@ class UnoRoomTest extends TestCase
         return $this->seat($seat)->postJson('/uno/rooms/'.$room['id'].'/'.$action, [...$payload, 'version' => $room['version'], 'actionId' => (string) Str::uuid()]);
     }
 
-    /** Plays the current seat's turn the way a careful player would: call UNO, play, answer, draw or pass. */
+    /** Plays the current seat's turn the way a careful player would: play (then call UNO on one card), answer, draw or pass. */
     private function takeTurn(array $room): array
     {
         $seat = $room['game']['currentSeat'];
         $view = $this->peek($room, $seat);
         $you = $view['game']['you'];
-        if ($you['canCallUno']) {
-            $view = $this->send($view, $seat, 'uno')->assertOk()->json();
-        }
         $playable = array_values(array_filter($view['game']['hand'], fn ($card) => $card['playable']));
         if ($playable) {
             $wild = in_array($playable[0]['value'], ['wild', 'wild4'], true) && count($view['game']['hand']) > 1;
+            $after = $this->send($view, $seat, 'play', ['card' => $playable[0]['id'], 'color' => $wild ? 'blue' : null])->assertOk()->json();
 
-            return $this->send($view, $seat, 'play', ['card' => $playable[0]['id'], 'color' => $wild ? 'blue' : null])->assertOk()->json();
+            return ($after['game']['you']['canCallUno'] ?? false) ? $this->send($after, $seat, 'uno')->assertOk()->json() : $after;
         }
         $action = $you['canPass'] ? 'pass' : ($you['canAccept'] ? 'accept' : 'draw');
 

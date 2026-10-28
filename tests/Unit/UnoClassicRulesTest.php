@@ -233,18 +233,24 @@ class UnoClassicRulesTest extends TestCase
         $this->assertConserved($state);
     }
 
-    public function test_uno_call_protects_and_a_missed_call_can_be_caught_until_the_next_move(): void
+    public function test_uno_is_called_after_the_second_last_card_and_can_be_caught_until_the_next_move(): void
     {
-        // Called in time: safe.
+        // Not before: holding two cards, even on your turn with a playable one, there is nothing to call yet.
         $state = $this->table([['red_1_1', 'red_2_1'], ['red_3_1', 'blue_3_1'], ['green_4_1', 'green_5_1']], 'red_9_1');
-        $this->assertTrue($this->rules()->canCallUno($state, 0));
-        $this->assertFalse($this->rules()->canCallUno($state, 1), 'Not on their turn with a playable card.');
-        $this->rules()->callUno($state, 0);
+        $this->assertFalse($this->rules()->canCallUno($state, 0));
+        $this->rejects(fn () => $this->rules()->callUno($state, 0), 'right after playing down to one card');
+
+        // Right after the play: the player may call it, and is then safe.
         $this->rules()->play($state, 0, 'red_1_1');
+        $this->assertTrue($this->rules()->canCallUno($state, 0));
+        $this->assertFalse($this->rules()->canCallUno($state, 1));
+        $this->rules()->callUno($state, 0);
         $this->assertNull($state->unoExposed);
+        $this->assertTrue($state->players[0]['uno']);
+        $this->assertFalse($this->rules()->canCallUno($state, 0), 'Called once is enough.');
         $this->rejects(fn () => $this->rules()->catchUno($state, 1, 0), 'safe');
 
-        // Missed: any opponent may catch before the next move; two cards penalty.
+        // Too slow: any opponent may catch first; two cards penalty and the call is gone.
         $state = $this->table([['red_1_1', 'red_2_1'], ['red_3_1', 'blue_3_1'], ['green_4_1', 'green_5_1']], 'red_9_1');
         $this->rules()->play($state, 0, 'red_1_1');
         $this->assertSame(0, $state->unoExposed);
@@ -252,18 +258,14 @@ class UnoClassicRulesTest extends TestCase
         $this->rules()->catchUno($state, 2, 0);
         $this->assertCount(3, $state->players[0]['hand']);
         $this->assertNull($state->unoExposed);
+        $this->assertFalse($this->rules()->canCallUno($state, 0));
 
-        // Missed but called late, before anyone catches: safe.
-        $state = $this->table([['red_1_1', 'red_2_1'], ['red_3_1', 'blue_3_1'], ['green_4_1']], 'red_9_1');
-        $this->rules()->play($state, 0, 'red_1_1');
-        $this->rules()->callUno($state, 0);
-        $this->assertNull($state->unoExposed);
-
-        // Missed and the next player moved: too late.
+        // Nobody caught it and the next player moved: too late for both.
         $state = $this->table([['red_1_1', 'red_2_1'], ['red_3_1', 'blue_3_1'], ['green_4_1']], 'red_9_1');
         $this->rules()->play($state, 0, 'red_1_1');
         $this->rules()->play($state, 1, 'red_3_1');
         $this->rejects(fn () => $this->rules()->catchUno($state, 2, 0), 'safe');
+        $this->assertFalse($this->rules()->canCallUno($state, 0));
         $this->assertConserved($state);
     }
 

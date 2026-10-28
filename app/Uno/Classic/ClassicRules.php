@@ -212,23 +212,19 @@ final class ClassicRules implements UnoRules
         return $state;
     }
 
-    /** True on your turn with two cards and one of them playable, or right after you were left on one card without calling. */
+    /**
+     * UNO is called after playing your second-to-last card, never before: from that play until the next player moves,
+     * you may call it, and every opponent may catch you first.
+     */
     public function canCallUno(UnoState $state, int $seat): bool
     {
-        if ($state->status !== UnoState::PLAYING || ! $state->isActive($seat)) {
-            return false;
-        }
-        if ($state->unoExposed === $seat) {
-            return true;
-        }
-
-        return ! $state->players[$seat]['uno'] && count($state->players[$seat]['hand']) === 2 && $this->legalCards($state, $seat);
+        return $state->status === UnoState::PLAYING && $state->isActive($seat) && $state->unoExposed === $seat;
     }
 
     public function callUno(UnoState $state, int $seat): UnoState
     {
         if (! $this->canCallUno($state, $seat)) {
-            throw new DomainException(__('Call UNO when you are about to play down to one card.'));
+            throw new DomainException(__('Call UNO right after playing down to one card.'));
         }
         $state->players[$seat]['uno'] = true;
         $state->unoExposed = null;
@@ -298,11 +294,12 @@ final class ClassicRules implements UnoRules
     /** Plays the current turn for whoever's turn it is; used to simulate whole matches. */
     public function autoAct(UnoState $state): UnoState
     {
+        // Simulated players are quick: whoever just went down to one card calls UNO before the next move.
+        if ($state->unoExposed !== null) {
+            $this->callUno($state, $state->unoExposed);
+        }
         $seat = $state->currentSeat;
         $legal = $this->legalCards($state, $seat);
-        if ($legal && $this->canCallUno($state, $seat)) {
-            $this->callUno($state, $seat);
-        }
         if ($legal) {
             $card = UnoCard::fromId($legal[0]);
 

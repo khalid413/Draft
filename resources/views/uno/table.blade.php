@@ -137,7 +137,7 @@
             <div class="carta-seat-me" :class="{ turn: me?.isTurn && game.status === 'PLAYING' }">
                 {{-- Above your hand, so the fanned cards can never cover them. --}}
                 <div x-show="me?.canAccept || me?.canPass || me?.canCallUno" class="carta-actions">
-                    <button x-show="me?.canCallUno" class="uno-call" @click="act('uno')" :disabled="busy || animating" :class="{ late: me?.exposed }">{{ __('UNO!') }}</button>
+                    <button x-show="me?.canCallUno" class="uno-call" @click="act('uno')" :disabled="busy">{{ __('UNO!') }}</button>
                     <button x-show="me?.canAccept" class="carta-danger" @click="act('accept')" :disabled="busy || animating" x-text="tn('Take :count card|Take :count cards', game.pending.draw)"></button>
                     <button x-show="me?.canPass" class="carta-secondary" @click="act('pass')" :disabled="busy || animating">{{ __('Keep it and pass') }}</button>
                 </div>
